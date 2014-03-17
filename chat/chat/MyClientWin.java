@@ -191,7 +191,7 @@ public class MyClientWin extends Applet implements Runnable
 		// define window and call standard methods
 		//
 		MyClientWin app = new MyClientWin();
-		Frame frame = new Frame("Totally Extinct Dinosaurs - Client Chatting Program");
+		Frame frame = new Frame("Dinotalk - Chatting Program");
 		app.init();
 		app.start();
 		
@@ -232,8 +232,7 @@ public class MyClientWin extends Applet implements Runnable
 	public void checkServer()
 	{
 		String 
-			sTemp = null,
-			sFrameType = null;
+			sTemp = null;
 		
 		chat.Frame receivedFrame;
 		Type receivedFrameType;
