@@ -5,6 +5,7 @@ package chat;
 
 import java.util.BitSet;
 import java.util.EnumMap;
+import java.util.Iterator;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -158,8 +159,35 @@ public class Frame
 	
 	protected String getAddrInBinary(Object Addr)
 	{
+		String res = "";
 		
-		return "";
+		for (String threeDigitNum : Addr.toString().split("."))
+		{
+			res += Integer.toBinaryString(Integer.parseInt(threeDigitNum));
+			
+		}
+		return res;
+	}
+	
+	/**
+	 * Assuming the input is a string 4*8 chars in length,
+	 * this method will convert each block of 8 chars into
+	 * a decimal number to form an IP address.
+	 * @param Addr the {@code String} representing an IP in binary
+	 * @return the decimal formatted IP.
+	 */
+	protected String getAddrFromBinary(Object Addr)
+			throws IndexOutOfBoundsException, NumberFormatException
+	{
+		String addr = "", binaryNum = Addr.toString();
+		
+		for (int i = 0; i < 4; i++)
+		{
+			binaryNum = addr.substring(i*8, i*8 + 7);
+			addr += Integer.parseInt(binaryNum);
+		}
+		
+		return addr;
 	}
 	
 	/**
@@ -189,6 +217,16 @@ public class Frame
 	}
 	
 	//*******************************HELPER METHODS************************************//
+	
+	/**
+	 * 
+	 * @param length the desired length of the formatted {@code String}.
+	 * @param input that is to be formatted.
+	 * @return
+	 */
+	static String fixedLenthDecimalString(Object input, int length) {
+	    return String.format("%1$"+length+ "d", input);
+	}
 	
 	static String calculateCrc(BitSet input)
 	{

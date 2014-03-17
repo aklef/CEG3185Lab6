@@ -1,7 +1,10 @@
 # aklef/CEG3585Lab3
 
-MyServer.java est le serveur et 
-MyClientWin.java le client.
+Ce projet vise à virtualiser le protocole de comunication HDLC utilisant une fenêtre coulissante pour les frames.
+
+> MyServer.java est le serveur
+> 
+> MyClientWin.java le client.
  
 Ce repo contient des programmes Java qui peuvent être compilés sur un ordinateur ayant eclipse d'installé et configuré.
  
