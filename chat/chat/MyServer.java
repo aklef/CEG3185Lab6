@@ -4,6 +4,8 @@ import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.util.LinkedList;
 
+import chat.Frame.Type;
+
 public class MyServer
 {
 	/**
@@ -52,7 +54,10 @@ public class MyServer
 		
 		for (ClientConnection connection : clientConnections)
 		{
-			connection.send("POL");
+			
+			Frame pollFrame = new Frame(connection.socket.getInetAddress().toString(),Type.IFrame, Frame.ControlCode.RNR);
+			connection.enqueue(pollFrame.toString());
+			
 			String pollResult = connection.read();
 			
 			if (pollResult != null && pollResult != "NAC")
@@ -61,7 +66,7 @@ public class MyServer
 				
 				if (pollResult.startsWith("ACK"))
 				{
-					connection.addMessage(pollResult.substring(2, pollResult.length()));
+					connection.addMessage(pollResult.getInfo);
 				}
 			}
 		}

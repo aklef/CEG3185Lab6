@@ -30,7 +30,7 @@ abstract class Connection
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 	
-	void send(String message)
+	private void send(String message)
 	{
 		// Parse input
 		

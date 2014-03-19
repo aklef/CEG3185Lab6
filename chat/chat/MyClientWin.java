@@ -32,8 +32,13 @@ public class MyClientWin extends Applet implements Runnable
 			fromServer, fromUser,
 			sConnection	  = "Not Connected to the chat server!";
 	private int serverPort = 4444;
-	
+	/**
+	 * User input field
+	 */
 	static TextField textField;
+	/**
+	 * Displays server messages.
+	 */
 	static TextArea textArea;
 	
 	Thread thread;
@@ -104,7 +109,7 @@ public class MyClientWin extends Applet implements Runnable
 				try
 				{
 					serverPort = Integer.parseInt(JOptionPane
-							.showInputDialog("Enter port number:"));
+							.showInputDialog("Enter port number:", 4444));
 				}
 				catch (NumberFormatException e)
 				{
@@ -231,9 +236,6 @@ public class MyClientWin extends Applet implements Runnable
 	 */
 	public void checkServer()
 	{
-		String 
-			sTemp = null;
-		
 		chat.Frame receivedFrame;
 		Type receivedFrameType;
 		
@@ -249,6 +251,7 @@ public class MyClientWin extends Applet implements Runnable
 				switch(receivedFrameType)
 				{
 					case IFrame:
+						textArea.setText(textArea.getText() + "\n" + fromServer); // put message on screen
 						
 						break;
 						
@@ -257,7 +260,6 @@ public class MyClientWin extends Applet implements Runnable
 						break;
 						
 					case UFrame:
-						
 						break;
 				}
 				
@@ -265,12 +267,7 @@ public class MyClientWin extends Applet implements Runnable
 				if (receivedFrameType.equals("SEL"))
 				{
 					fromServer = fromServer.substring(4, fromServer.length());
-					sTemp = textArea.getText();
-					
-					//
-					// put message on screen
-					//
-					textArea.setText(sTemp + "\n" + fromServer);
+	
 				}
 				//
 				// if received frame was POLLING

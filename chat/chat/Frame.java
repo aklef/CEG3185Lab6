@@ -9,6 +9,9 @@ import java.util.Iterator;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.EnumBiMap;
+
 
 /**
  * Represents a single link-layer HDLC frame.
@@ -25,57 +28,104 @@ public class Frame
 	
 	public static enum Type {
 		/**
-		 * User data frame.
+		 * User data frame. Contains actual user data that needs
+		 * to be extracted. Contains {@code Frame} sequence numbers
 		 */
 		IFrame, 
 		/**
-		 * Control frame
+		 * Control frame. Contains a {@code ControlCode}
+		 * for {@code Frame} management but to user info.
 		 */
 		SFrame, 
 		/**
-		 * Unnumbered frame for link management
+		 * Unnumbered frame for link management. 
+		 * Might be unused in this context.
 		 */
 		UFrame
 		};
-	private static EnumMap<Type, String> FC;
+		
+	/**
+	 * Placeholder {@code String}s for each {@code Frame} {@code Type}'s {@code ControlCode}.
+	 */
+	private static BiMap<Type, String> FC;
 	static
     {
-		FC = new EnumMap<Type, String>(Type.class);
+		//FC = new EnumMap<Type, String>(Type.class);
+		// FIXME
+		FC = EnumHashBiMap.create(Type, String);
 		FC.put(Type.IFrame, "0NSPNR");
 		FC.put(Type.SFrame, "10CCPNR");
 		FC.put(Type.UFrame, "11CCPBBB");
     }
-	public static enum ControlCode {RR, RNR, REJ, SREJ};
-	private static EnumMap<ControlCode, String> CC;
+	public static enum ControlCode
+	{
+		RR, RNR, REJ, SREJ, 
+		SNRM, SNRME, SIM, DISC, UA, RD, RIM, UI, UP, RSET, XID, FRMR;
+	}
+	private static BiMap<ControlCode, String> CC;
 	static
     {
-		CC = new EnumMap<ControlCode, String>(ControlCode.class);
+		//CC = new EnumMap<ControlCode, String>(ControlCode.class);
+		// FIXME
+		CC = EnumHashBiMap.create();
 		CC.put(ControlCode.RR, "00");
 		CC.put(ControlCode.RNR, "01");
 		CC.put(ControlCode.REJ, "10");
 		CC.put(ControlCode.SREJ, "11");
+		
+		CC.put(ControlCode.SNRM,  "00001");
+		CC.put(ControlCode.SNRME, "11011");
+		CC.put(ControlCode.SIM,   "11000");
+		CC.put(ControlCode.DISC,  "00010");
+		CC.put(ControlCode.RD,    "00010");
+		CC.put(ControlCode.UA,    "00110");
+		CC.put(ControlCode.RIM,   "10000");
+		CC.put(ControlCode.UI,    "00000");
+		CC.put(ControlCode.UP,    "00100");
+		CC.put(ControlCode.RSET,  "11001");
+		CC.put(ControlCode.XID,   "11101");
+		CC.put(ControlCode.FRMR,  "10001");
     }
 	
-	private String addr, control, info;
+	private String addr, fc, info;
 	protected String sequenceNumber;
+	
+	/**
+	 * The {@code ControlCode} this frame is carrying.
+	 */
+	protected ControlCode cc;
 	/**
 	 * This {@code Frame}'s {@code Type}.
 	 */
 	protected Type type;
 	
 	/**
-	 * Empty constructor
+	 * Parses a binary string to create a {@code Frame}
+	 * Its type and data are auto-detected.
+	 * 
+	 * @param frame encoded as binary {@code String}
 	 */
 	public Frame (String frame)
 	{
 		this.fromString(frame);
 	}
-
+	
+	/**
+	 * Used to create an {@code SFrame} from parameters.
+	 */
 	public Frame (Object Addr, Type type, ControlCode Code)
 	{
 		this(Addr, type, Code, "");
 	}
 	
+	/**
+	 * Used to create an {@code IFrame} from parameters.
+	 * 
+	 * @param addr of the client in TCP/IP.
+	 * @param type of {@code Frame} as enum value.
+	 * @param code the {@code ControlCode} of this {@code Frame}
+	 * @param info client data.
+	 */
 	public Frame (Object addr, Type type, ControlCode code, Object info)
 	{
 		this.addr = addr.toString();
@@ -83,27 +133,37 @@ public class Frame
 		this.setType(type, code);
 	}
 	
+	/**
+	 * Sets this {@code Frame}'s {@code Type} and {@code ControlCode}
+	 * by replacing placeolder values in {@code FC}.
+	 * 
+	 * @param type this {@code Frame}'s {@code Type} enum value
+	 * @param code the {@code ControlCode} of this {@code Frame}
+	 */
 	private void setType (Type type, ControlCode code)
 	{
 		this.type = type;
-		control = FC.get(type);
+		this.cc = code;
+		String tempfc = FC.get(type);
 		
 		switch (type) {
 			// User data frame
 			case IFrame:
 				sequenceNumber = getSequenceNumber();
-				control.replace("NS", sequenceNumber);
+				tempfc.replace("NS", sequenceNumber);
 				break;
 			
 			// Control frame
 			case SFrame:
-				control.replace("CC", CC.get(code));
+				tempfc.replace("CC", CC.get(code));
 				break;
 				
 			// Unnumbered frame for link management
 			case UFrame:
 				break;
 		}
+		
+		this.fc = tempfc;
 	}
 	
 	protected Type getFrameType()
@@ -116,11 +176,11 @@ public class Frame
 	{
 		if (isTrue)
 		{
-			control.replace("P", "1");
+			fc.replace("P", "1");
 		}
 		else
 		{
-			control.replace("P", "0");
+			fc.replace("P", "0");
 		}
 	}
 	
@@ -130,7 +190,7 @@ public class Frame
 	@Override
 	public String toString()
 	{
-		String frame = FLAG + addr + control;
+		String frame = FLAG + addr + cc;
 		
 		switch (this.type) {
 			case IFrame:
@@ -149,22 +209,21 @@ public class Frame
 	
 	protected int getReceivedFrameIndex()
 	{
-		return Integer.parseInt(control.substring(5, 7));
+		return Integer.parseInt(fc.substring(5, 7));
 	}
 	
-	private String getSequenceNumber()
+	private static String getSequenceNumber()
 	{
 		return Integer.toBinaryString(SEQUENCE_NUMBER++ % 8);
 	}
 	
-	protected String getAddrInBinary(Object Addr)
+	static String getAddrInBinary(Object Addr)
 	{
 		String res = "";
 		
 		for (String threeDigitNum : Addr.toString().split("."))
 		{
 			res += Integer.toBinaryString(Integer.parseInt(threeDigitNum));
-			
 		}
 		return res;
 	}
@@ -176,7 +235,7 @@ public class Frame
 	 * @param Addr the {@code String} representing an IP in binary
 	 * @return the decimal formatted IP.
 	 */
-	protected String getAddrFromBinary(Object Addr)
+	static String getAddrFromBinary(Object Addr)
 			throws IndexOutOfBoundsException, NumberFormatException
 	{
 		String addr = "", binaryNum = Addr.toString();
@@ -191,22 +250,37 @@ public class Frame
 	}
 	
 	/**
-	 * Parses a string as input from which to create this frame.
+	 * 
+	 * 
+	 * @return
+	 */
+	static ControlCode getCC()
+	{
+		ControlCode cc;
+		
+		// FIXME
+		cc = CC.get("");
+		
+		return cc;
+	}
+	
+	/**
+	 * Takes a string as input from which to create this frame.
 	 * 
 	 * @param frame {@code String} representation of this frame.
 	 */
 	void fromString(String frame)
 	{
 		frame.replaceAll(FLAG, "");
-		this.addr = (frame.substring(0, 4*8));	
-		this.control = frame.substring(4*8, 5*8);
+		this.addr = getAddrFromBinary(frame.substring(0, 4*8));	
+		this.fc = frame.substring(4*8, 5*8);
 		this.info = frame.substring(5*8, frame.length() - 1);
 		
-		if (control.charAt(0) == '0')
+		if (fc.charAt(0) == '0')
 		{
 			this.type = Frame.Type.IFrame;
 		}
-		else if (control.charAt(1) == '0')
+		else if (fc.charAt(1) == '0')
 		{
 			this.type = Frame.Type.SFrame;
 		}
@@ -214,6 +288,9 @@ public class Frame
 		{
 			this.type = Frame.Type.UFrame;
 		}
+		
+
+		this.cc = getCC();
 	}
 	
 	//*******************************HELPER METHODS************************************//

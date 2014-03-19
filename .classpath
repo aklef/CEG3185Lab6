@@ -3,5 +3,6 @@
 	<classpathentry excluding="*.pdf|*.txt|chat/" including="*.java" kind="src" path=""/>
 	<classpathentry kind="src" path="chat"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="lib/guava-16.0.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
