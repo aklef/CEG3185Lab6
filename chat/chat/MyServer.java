@@ -40,6 +40,7 @@ public class MyServer
         public static void consume(NetworkFrame received)
         {
             System.out.println("Consumed : " + received);
+            
         }
 	
 	/**
@@ -64,7 +65,7 @@ public class MyServer
                 if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getControlCode() == ControlCode.RR)
                 {
                     //Received RR frame
-                    System.out.println("Station " + connection.getAddress() + " is read to receive");
+                    System.out.println("Station " + connection.getAddress() + " is ready to receive");
                 }
                 else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getControlCode() == ControlCode.RR)
                 {

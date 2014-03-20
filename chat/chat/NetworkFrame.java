@@ -12,6 +12,8 @@ import java.util.zip.Checksum;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.EnumBiMap;
 import com.google.common.collect.EnumHashBiMap;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 
 /**
@@ -275,6 +277,11 @@ public class NetworkFrame
             return info;
         }
 	
+        public InetAddress getDestinationAddress() throws UnknownHostException
+        {
+            return InetAddress.getByName(addr);
+        }
+        
 	/**
 	 * Takes a string as input from which to create this frame.
 	 * 
