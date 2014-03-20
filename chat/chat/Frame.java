@@ -11,6 +11,7 @@ import java.util.zip.Checksum;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.EnumBiMap;
+import com.google.common.collect.EnumHashBiMap;
 
 
 /**
@@ -170,9 +171,14 @@ public class Frame
 	{
 		return type;
 	}
+        
+        protected ControlCode getControlCode()
+        {
+            return cc;
+        }
 	
-	@SuppressWarnings("unused")
-	private void setPollFinal(Boolean isTrue)
+
+	public void setPollFinal(Boolean isTrue)
 	{
 		if (isTrue)
 		{

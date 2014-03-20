@@ -1,10 +1,12 @@
 package chat;
+import chat.Frame.ControlCode;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.util.LinkedList;
 
 import chat.Frame.Type;
+import java.net.InetAddress;
 
 public class MyServer
 {
@@ -22,7 +24,7 @@ public class MyServer
 	 * 
 	 * @param clients List of {@code ClientConnection}s to message.
 	 */
-	public static void broadcastMessages(LinkedList<ClientConnection> clients)
+	public static void sendMessages(LinkedList<ClientConnection> clients)
 	{
 		for (ClientConnection currentClient : clients)
 		{
@@ -30,18 +32,15 @@ public class MyServer
 			
 			for (String message : currentClientMessages)
 			{
-				System.out.println("Sending : " + message);
-				
-				for (ClientConnection otherClient : clients)
-				{
-					if (!currentClient.equals(otherClient))
-					{
-						otherClient.send(message);
-					}
-				}
+                            currentClient.send(message);
 			}
 		}
 	}
+        
+        public static void consume(Frame received)
+        {
+            System.out.println("Consumed : " + received);
+        }
 	
 	/**
 	 * Accepts a list of <code>clientConnections<code> to poll.
@@ -52,25 +51,73 @@ public class MyServer
 	public static void pollStations(LinkedList<ClientConnection> clientConnections) throws IOException
 	{
 		
-		for (ClientConnection connection : clientConnections)
-		{
-			
-			Frame pollFrame = new Frame(connection.socket.getInetAddress().toString(),Type.IFrame, Frame.ControlCode.RNR);
-			connection.enqueue(pollFrame.toString());
-			
-			String pollResult = connection.read();
-			
-			if (pollResult != null && pollResult != "NAC")
-			{
-				System.out.println("Got response: " + pollResult);
-				
-				if (pollResult.startsWith("ACK"))
-				{
-					connection.addMessage(pollResult.getInfo);
-				}
-			}
-		}
+            for (ClientConnection connection : clientConnections)
+            {
+                Frame rrxp = new Frame((Object)connection.getAddress(), Type.SFrame, ControlCode.RR);
+                rrxp.setPollFinal(true);
+                connection.send(rrxp.toString());
+                
+                                    
+                String message = connection.read();
+                Frame rrxp_read = new Frame(message);
+
+                if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getControlCode() == ControlCode.RR)
+                {
+                    //Received RR frame
+                    System.out.println("Station " + connection.getAddress() + " is read to receive");
+                }
+                else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getControlCode() == ControlCode.RR)
+                {
+                    //Right branch
+                    InetAddress destination = rrxp_read.getDestinationAddress();
+                    
+                    boolean found = false;
+                    for (ClientConnection otherConnection : clientConnections)
+                    {
+                        if (destination.equals(otherConnection.getAddress()))
+                        {
+                            otherConnection.addMessage(message);
+                            found = true;
+                        }
+                    }
+                    
+                    if (!found)
+                    {
+                        consume(rrxp_read);
+                    }
+                    
+                }
+            
+                
+                
+            }
+                
+
+                
+
 	}
+        
+        
+        public static void handShake(ClientConnection connection) throws IOException
+        {
+            {
+                Frame snrm = new Frame((Object)connection.getAddress(), Type.UFrame, ControlCode.SNRM);
+                connection.send(snrm.toString());
+            }
+            
+            {
+                String message = connection.read();
+                Frame ua = new Frame(message);
+
+                if (ua.getFrameType() != Type.UFrame || ua.getControlCode() != ControlCode.UA)
+                {
+                    System.out.println("ERROR : Did not receive UA frame from " + connection.getAddress());
+                }
+            }
+            
+            
+            
+        }
 	
 	public static void main(String[] args) throws IOException
 	{
@@ -78,7 +125,7 @@ public class MyServer
 		ServerSocket serverSocket = null;
 		LinkedList<ClientConnection> clientConnections = new LinkedList<ClientConnection>();
 		
-		boolean hasClients = false;
+
 				
 		try
 		{
@@ -91,28 +138,37 @@ public class MyServer
 		}
 		
 		serverSocket.setSoTimeout(SERVER_SOCKET_TIMEOUT);
+                
+                boolean connected = false;
+                
+                //During the simulation, 2 clients must be connected. Allow them to connect before simulation
+                while (true)
+                {
+                    try
+                    {
+                            System.err.print("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
+                            clientConnections.add(new ClientConnection(serverSocket.accept()));
+                            
+                            handShake(clientConnections.getLast());
+                            connected = true;
+                    }
+                    catch (InterruptedIOException e) 
+                    {
+                            //Timeout, process queued messages
+                    }	
+                    
+                    
+                            pollStations(clientConnections);
+                            sendMessages(clientConnections);
+
+                            if (clientConnections.size() == 0 && connected)
+                            {
+                                    break;
+                            }
+                    
+                    
+                }
 		
-		while (true)
-		{
-			try
-			{
-				System.err.print("Polling. ");
-				clientConnections.add(new ClientConnection(serverSocket.accept()));
-				hasClients = true;
-			}
-			catch (InterruptedIOException e) 
-			{
-				//Timeout, process queued messages
-			}
-			
-			broadcastMessages(clientConnections);
-			pollStations(clientConnections);
-			
-			if (clientConnections.size() == 0 && !hasClients)
-			{
-				break;
-			}
-		}
 		
 		// We have escaped the listen loop; close the server.
 		serverSocket.close();
@@ -123,3 +179,20 @@ public class MyServer
 		}
 	}
 }
+
+
+
+//			Frame pollFrame = new Frame(connection.socket.getInetAddress().toString(),Type.IFrame, Frame.ControlCode.RNR);
+//			connection.enqueue(pollFrame.toString());
+//			
+//			String pollResult = connection.read();
+//			
+//			if (pollResult != null && pollResult != "NAC")
+//			{
+//				System.out.println("Got response: " + pollResult);
+//				
+//				if (pollResult.startsWith("ACK"))
+//				{
+//					connection.addMessage(pollResult.getInfo);
+//				}
+//			}
