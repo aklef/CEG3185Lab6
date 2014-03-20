@@ -5,17 +5,19 @@ package chat;
 
 import java.util.LinkedList;
 
+import chat.NetFrame;
+
 /**
- * This class represents a sliding {@code Frame} window implemented using HDLC.
+ * This class represents a sliding {@code NetFrame} window implemented using HDLC.
  * 
  * @author Andréas K.LeF.
  */
-public class Window extends LinkedList<Frame>
+public class Window extends LinkedList<NetFrame>
 {
 	private static final int MAX_WINDOW_LENGTH = 2^5-1;
 	
 	/**
-	 * {@code Frame} index for sliding window.
+	 * {@code NetFrame} index for sliding window.
 	 */
 	protected int currentFrameIndex = 0, receivedFrameIndex = 0, sentframeIndex = 0;
 	
@@ -28,7 +30,7 @@ public class Window extends LinkedList<Frame>
 	}
 	
 	@Override
-	public boolean add (Frame newFrame)
+	public boolean add (NetFrame newFrame)
 	{
 		if (this.size() == MAX_WINDOW_LENGTH)
 		{
@@ -37,7 +39,7 @@ public class Window extends LinkedList<Frame>
 		
 		this.add(newFrame);
 		
-		if (newFrame.type == Frame.Type.SFrame)
+		if (newFrame.type == NetFrame.Type.SFrame)
 		{
 			receivedFrameIndex = newFrame.getReceivedFrameIndex();
 		}

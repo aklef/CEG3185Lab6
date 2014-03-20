@@ -1,6 +1,3 @@
-/**
- * 
- */
 package chat;
 
 import java.net.InetAddress;
@@ -14,11 +11,11 @@ import com.google.common.collect.HashBiMap;
 
 /**
  * Represents a single link-layer HDLC frame.
- * Each {@code Frame} has a designatred {@code Type} enum value.
+ * Each {@code NetFrame} has a designated {@code Type} {@code enum} value.
  * 
  * @author Andréas K.LeF.
  */
-public class Frame
+public class NetFrame
 {
 	private static final String FLAG = "01111110";
 	@SuppressWarnings("unused")
@@ -28,12 +25,12 @@ public class Frame
 	public static enum Type {
 		/**
 		 * User data frame. Contains actual user data that needs
-		 * to be extracted. Contains {@code Frame} sequence numbers
+		 * to be extracted. Contains {@code NetFrame} sequence numbers
 		 */
 		IFrame, 
 		/**
 		 * Control frame. Contains a {@code ControlCode}
-		 * for {@code Frame} management but to user info.
+		 * for {@code NetFrame} management but to user info.
 		 */
 		SFrame, 
 		/**
@@ -44,7 +41,7 @@ public class Frame
 		};
 		
 	/**
-	 * Placeholder {@code String}s for each {@code Frame} {@code Type}'s {@code ControlCode}.
+	 * Placeholder {@code String}s for each {@code NetFrame} {@code Type}'s {@code ControlCode}.
 	 */
 	private static BiMap<Type, String> FC;
 	static
@@ -90,17 +87,17 @@ public class Frame
 	 */
 	protected ControlCode cc;
 	/**
-	 * This {@code Frame}'s {@code Type}.
+	 * This {@code NetFrame}'s {@code Type}.
 	 */
 	protected Type type;
 	
 	/**
-	 * Parses a binary string to create a {@code Frame}
+	 * Parses a binary string to create a {@code NetFrame}
 	 * Its type and data are auto-detected.
 	 * 
 	 * @param frame encoded as binary {@code String}
 	 */
-	public Frame (String frame)
+	public NetFrame (String frame)
 	{
 		this.fromString(frame);
 	}
@@ -108,7 +105,7 @@ public class Frame
 	/**
 	 * Used to create an {@code SFrame} from parameters.
 	 */
-	public Frame (Object Addr, Type type, ControlCode Code)
+	public NetFrame (Object Addr, Type type, ControlCode Code)
 	{
 		this(Addr, type, Code, "");
 	}
@@ -117,11 +114,11 @@ public class Frame
 	 * Used to create an {@code IFrame} from parameters.
 	 * 
 	 * @param addr of the client in TCP/IP.
-	 * @param type of {@code Frame} as enum value.
-	 * @param code the {@code ControlCode} of this {@code Frame}
+	 * @param type of {@code NetFrame} as enum value.
+	 * @param code the {@code ControlCode} of this {@code NetFrame}
 	 * @param info client data.
 	 */
-	public Frame (Object addr, Type type, ControlCode code, Object info)
+	public NetFrame (Object addr, Type type, ControlCode code, Object info)
 	{
 		this.addr = addr.toString();
 		this.info = info.toString();
@@ -129,11 +126,11 @@ public class Frame
 	}
 	
 	/**
-	 * Sets this {@code Frame}'s {@code Type} and {@code ControlCode}
+	 * Sets this {@code NetFrame}'s {@code Type} and {@code ControlCode}
 	 * by replacing placeolder values in {@code FC}.
 	 * 
-	 * @param type this {@code Frame}'s {@code Type} enum value
-	 * @param code the {@code ControlCode} of this {@code Frame}
+	 * @param type this {@code NetFrame}'s {@code Type} enum value
+	 * @param code the {@code ControlCode} of this {@code NetFrame}
 	 */
 	private void setType (Type type, ControlCode code)
 	{
@@ -180,7 +177,7 @@ public class Frame
 	}
 	
 	/**
-	 * Returns a {@code String} representation of this {@code Frame}.
+	 * Returns a {@code String} representation of this {@code NetFrame}.
 	 */
 	@Override
 	public String toString()
@@ -246,7 +243,15 @@ public class Frame
 	
 	InetAddress getDestinationAddress()
 	{
+		if (this.type != Type.IFrame)
+			return null;
+		
 		return null;
+	}
+	
+	String getInfo()
+	{
+		return "";
 	}
 	
 	/**
@@ -258,7 +263,7 @@ public class Frame
 	{
 		ControlCode cc;
 		
-		// FIXME
+		// FIXME getCC from binary
 		cc = CC.inverse().get("");
 		
 		return cc;
@@ -278,15 +283,15 @@ public class Frame
 		
 		if (fc.charAt(0) == '0')
 		{
-			this.type = Frame.Type.IFrame;
+			this.type = NetFrame.Type.IFrame;
 		}
 		else if (fc.charAt(1) == '0')
 		{
-			this.type = Frame.Type.SFrame;
+			this.type = NetFrame.Type.SFrame;
 		}
 		else
 		{
-			this.type = Frame.Type.UFrame;
+			this.type = NetFrame.Type.UFrame;
 		}
 		
 

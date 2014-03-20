@@ -1,11 +1,11 @@
 package chat;
-import chat.Frame.ControlCode;
+import chat.NetFrame.ControlCode;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.util.LinkedList;
 
-import chat.Frame.Type;
+import chat.NetFrame.Type;
 import java.net.InetAddress;
 
 public class MyServer
@@ -20,7 +20,7 @@ public class MyServer
 	 * Send each connected client's queued messages to all other clients.
 	 * A very for-midable method.
 	 * 
-	 * The messages being broadcast are most likely {@code Frame}s in {@code String} form.
+	 * The messages being broadcast are most likely {@code NetFrame}s in {@code String} form.
 	 * 
 	 * @param clients List of {@code ClientConnection}s to message.
 	 */
@@ -32,12 +32,12 @@ public class MyServer
 			
 			for (String message : currentClientMessages)
 			{
-                            currentClient.send(message);
+				currentClient.send(message);
 			}
 		}
 	}
         
-        public static void consume(Frame received)
+        public static void consume(NetFrame received)
         {
             System.out.println("Consumed : " + received);
         }
@@ -53,13 +53,13 @@ public class MyServer
 		
             for (ClientConnection connection : clientConnections)
             {
-                Frame rrxp = new Frame((Object)connection.getAddress(), Type.SFrame, ControlCode.RR);
+                NetFrame rrxp = new NetFrame((Object)connection.getAddress(), Type.SFrame, ControlCode.RR);
                 rrxp.setPollFinal(true);
                 connection.send(rrxp.toString());
                 
                                     
                 String message = connection.read();
-                Frame rrxp_read = new Frame(message);
+                NetFrame rrxp_read = new NetFrame(message);
 
                 if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getCC() == ControlCode.RR)
                 {
@@ -101,13 +101,13 @@ public class MyServer
         public static void handShake(ClientConnection connection) throws IOException
         {
             {
-                Frame snrm = new Frame((Object)connection.getAddress(), Type.UFrame, ControlCode.SNRM);
+                NetFrame snrm = new NetFrame((Object)connection.getAddress(), Type.UFrame, ControlCode.SNRM);
                 connection.send(snrm.toString());
             }
             
             {
                 String message = connection.read();
-                Frame ua = new Frame(message);
+                NetFrame ua = new NetFrame(message);
 
                 if (ua.getFrameType() != Type.UFrame || ua.getCC() != ControlCode.UA)
                 {
@@ -182,7 +182,7 @@ public class MyServer
 
 
 
-//			Frame pollFrame = new Frame(connection.socket.getInetAddress().toString(),Type.IFrame, Frame.ControlCode.RNR);
+//			NetFrame pollFrame = new NetFrame(connection.socket.getInetAddress().toString(),Type.IFrame, NetFrame.ControlCode.RNR);
 //			connection.enqueue(pollFrame.toString());
 //			
 //			String pollResult = connection.read();

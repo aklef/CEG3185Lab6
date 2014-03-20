@@ -1,5 +1,6 @@
 package chat;
 
+import chat.NetFrame.ControlCode;
 import java.applet.Applet;
 import java.awt.Button;
 import java.awt.Event;
@@ -14,7 +15,7 @@ import java.net.UnknownHostException;
 
 import javax.swing.JOptionPane;
 
-import chat.Frame.Type;
+import chat.NetFrame.*;
 
 public class MyClientWin extends Applet implements Runnable
 {
@@ -25,8 +26,7 @@ public class MyClientWin extends Applet implements Runnable
 	
 	static boolean bConnected = false;
 	
-	static Socket mySocket  = null;
-	
+
 	static String
 			clientId, serverIP,
 			fromServer, fromUser,
@@ -127,17 +127,20 @@ public class MyClientWin extends Applet implements Runnable
 				//
 				// mySocket.setSoTimeout(5000);
 				
-				bConnected = true;
-				//
-				// define input and output streams for reading and
-				// writing to the socket
-				//
-				serverConnection.send(clientId);
-				
-				//
-				// set screen messages
-				//
+				String received = serverConnection.read();
+                                NetFrame snrm = new NetFrame(received);
+                                
+                                if (snrm.getFrameType() != Type.UFrame || snrm.getCC() != ControlCode.SNRM)
+                                {
+                                    System.out.println("ERROR : Did not receive SNRM frame from " + serverConnection.getAddress());
+                                }
+                                
+                                NetFrame ua = new NetFrame((Object)serverConnection.getAddress(), Type.UFrame, ControlCode.UA);
+                                serverConnection.send(ua.toString());
+                                
 				sConnection = "Connected to the chat server!";
+                                
+                                
 				
 				//
 				// define new thread
@@ -236,62 +239,54 @@ public class MyClientWin extends Applet implements Runnable
 	 */
 	public void checkServer()
 	{
-		chat.Frame receivedFrame;
-		Type receivedFrameType;
+
+
 		
 		try
 		{
 			if ((fromServer = serverConnection.read()) != null)
 			{
-				receivedFrame = new chat.Frame(fromServer);
-				receivedFrameType = receivedFrame.getFrameType();
+				NetFrame receivedFrame = new NetFrame(fromServer);
+
 				//
 				// switch on type of frame
 				//
-				switch(receivedFrameType)
+				switch(receivedFrame.getFrameType())
 				{
 					case IFrame:
+                        //Consume
+                        fromServer = receivedFrame.getInfo();
 						textArea.setText(textArea.getText() + "\n" + fromServer); // put message on screen
-						
 						break;
 						
 					case SFrame:
-						
+						if (receivedFrame.getCC() == ControlCode.RR)
+                        {
+                            //Something to send
+                            if (fromUser != null)
+                            {
+                                NetFrame toSend = new NetFrame((Object)serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
+                                serverConnection.send(toSend.toString());
+                                fromUser = null;
+                            }
+                            //Nothing to send
+                            else
+                            {
+                               NetFrame toSend = new NetFrame((Object)serverConnection.getAddress(), Type.SFrame, ControlCode.RR); 
+                               serverConnection.send(toSend.toString()); 
+                            }
+                        }
+                        else
+                        {
+                            System.out.println("Error: did not receive RR control code");
+                        }
 						break;
 						
 					case UFrame:
+                        //Ignore
 						break;
 				}
 				
-				//FIXME Start
-				if (receivedFrameType.equals("SEL"))
-				{
-					fromServer = fromServer.substring(4, fromServer.length());
-	
-				}
-				//
-				// if received frame was POLLING
-				// and data to be send
-				// return ACK with data
-				// otherwise
-				// return NACK frame
-				//
-				else if (receivedFrameType.equals("POL"))
-				{
-					//
-					// message in stack to be send to the server
-					//
-					if (fromUser != null)
-					{
-						serverConnection.send("ACK" + clientId + " says: " + fromUser);
-						fromUser = null;
-					}
-					else
-					{
-						serverConnection.send("NAC");
-					}
-				}
-				// FIXME End
 			}
 		}
 		// catch exceptions while reading/writing from/to server
