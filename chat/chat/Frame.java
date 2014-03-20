@@ -10,7 +10,7 @@ import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import com.google.common.collect.BiMap;
-import com.google.common.collect.EnumBiMap;
+import com.google.common.collect.HashBiMap;
 
 
 /**
@@ -50,9 +50,7 @@ public class Frame
 	private static BiMap<Type, String> FC;
 	static
     {
-		//FC = new EnumMap<Type, String>(Type.class);
-		// FIXME
-		FC = EnumHashBiMap.create(Type, String);
+		FC = HashBiMap.create();
 		FC.put(Type.IFrame, "0NSPNR");
 		FC.put(Type.SFrame, "10CCPNR");
 		FC.put(Type.UFrame, "11CCPBBB");
@@ -65,9 +63,7 @@ public class Frame
 	private static BiMap<ControlCode, String> CC;
 	static
     {
-		//CC = new EnumMap<ControlCode, String>(ControlCode.class);
-		// FIXME
-		CC = EnumHashBiMap.create();
+		CC = HashBiMap.create();
 		CC.put(ControlCode.RR, "00");
 		CC.put(ControlCode.RNR, "01");
 		CC.put(ControlCode.REJ, "10");
@@ -259,7 +255,7 @@ public class Frame
 		ControlCode cc;
 		
 		// FIXME
-		cc = CC.get("");
+		cc = CC.inverse().get("");
 		
 		return cc;
 	}
