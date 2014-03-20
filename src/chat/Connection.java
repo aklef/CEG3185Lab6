@@ -8,8 +8,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.InterruptedIOException;
 import java.io.PrintWriter;
+import java.net.InetAddress;
 import java.net.Socket;
-import java.util.LinkedList;
 
 /**
  * @author Andréas K.LeF.
@@ -17,6 +17,7 @@ import java.util.LinkedList;
  */
 abstract class Connection
 {
+	@SuppressWarnings("unused")
 	private static int RECEIVED_SEQUENCE_NUMBER = 0;
 	Socket socket;
 	PrintWriter writer;
@@ -30,12 +31,17 @@ abstract class Connection
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 	
-	private void send(String message)
+	public void send(String message)
 	{
 		// Parse input
 		
 		writer.println(message);
 	}
+        
+        public InetAddress getAddress()
+        {
+            return socket.getInetAddress();
+        }
 	
 	String read() throws IOException
 	{

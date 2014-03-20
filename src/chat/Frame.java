@@ -3,9 +3,8 @@
  */
 package chat;
 
+import java.net.InetAddress;
 import java.util.BitSet;
-import java.util.EnumMap;
-import java.util.Iterator;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
@@ -167,8 +166,8 @@ public class Frame
 		return type;
 	}
 	
-	@SuppressWarnings("unused")
-	private void setPollFinal(Boolean isTrue)
+
+	public void setPollFinal(Boolean isTrue)
 	{
 		if (isTrue)
 		{
@@ -245,12 +244,17 @@ public class Frame
 		return addr;
 	}
 	
+	InetAddress getDestinationAddress()
+	{
+		return null;
+	}
+	
 	/**
 	 * 
 	 * 
 	 * @return
 	 */
-	static ControlCode getCC()
+	ControlCode getCC()
 	{
 		ControlCode cc;
 		
