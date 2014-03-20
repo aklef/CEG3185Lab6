@@ -1,6 +1,3 @@
-/**
- * 
- */
 package chat;
 
 import java.util.LinkedList;
@@ -12,9 +9,10 @@ import chat.NetFrame;
  * 
  * @author Andréas K.LeF.
  */
+@SuppressWarnings("serial")
 public class Window extends LinkedList<NetFrame>
 {
-	private static final int MAX_WINDOW_LENGTH = 2^5-1;
+	private static final int MAX_WINDOW_LENGTH = 2^6-1;
 	
 	/**
 	 * {@code NetFrame} index for sliding window.
@@ -47,8 +45,8 @@ public class Window extends LinkedList<NetFrame>
 		return true;
 	}
 	
-	void acknowledgeReception (int frameIndex)
+	void acknowledgeReception (int currentFrameIndex)
 	{
-		
+		this.currentFrameIndex = currentFrameIndex;
 	}
 }

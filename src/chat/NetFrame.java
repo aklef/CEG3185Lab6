@@ -1,13 +1,13 @@
 package chat;
 
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.BitSet;
 import java.util.zip.CRC32;
 import java.util.zip.Checksum;
 
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
-
 
 /**
  * Represents a single link-layer HDLC frame.
@@ -18,7 +18,6 @@ import com.google.common.collect.HashBiMap;
 public class NetFrame
 {
 	private static final String FLAG = "01111110";
-	@SuppressWarnings("unused")
 	private static final int MAX_FRAME_SIZE = 64*8;
 	private static int SEQUENCE_NUMBER = 0;
 	
@@ -79,7 +78,8 @@ public class NetFrame
 		CC.put(ControlCode.FRMR,  "10001");
     }
 	
-	private String addr, fc, info;
+	InetAddress addr;
+	private String fc, info, infoRemainder;
 	protected String sequenceNumber;
 	
 	/**
@@ -96,8 +96,12 @@ public class NetFrame
 	 * Its type and data are auto-detected.
 	 * 
 	 * @param frame encoded as binary {@code String}
+	 * @throws UnknownHostException 
+	 * @throws IndexOutOfBoundsException 
+	 * @throws NumberFormatException
 	 */
 	public NetFrame (String frame)
+			throws NumberFormatException, IndexOutOfBoundsException, UnknownHostException
 	{
 		this.fromString(frame);
 	}
@@ -105,9 +109,9 @@ public class NetFrame
 	/**
 	 * Used to create an {@code SFrame} from parameters.
 	 */
-	public NetFrame (Object Addr, Type type, ControlCode Code)
+	public NetFrame (InetAddress destAddr, Type type, ControlCode Code)
 	{
-		this(Addr, type, Code, "");
+		this(destAddr, type, Code, "");
 	}
 	
 	/**
@@ -117,11 +121,12 @@ public class NetFrame
 	 * @param type of {@code NetFrame} as enum value.
 	 * @param code the {@code ControlCode} of this {@code NetFrame}
 	 * @param info client data.
+	 * @throws UnknownHostException 
 	 */
-	public NetFrame (Object addr, Type type, ControlCode code, Object info)
+	public NetFrame (InetAddress destAddr, Type type, ControlCode code, String info)
 	{
-		this.addr = addr.toString();
-		this.info = info.toString();
+		this.addr = destAddr;
+		this.setInfo(info);
 		this.setType(type, code);
 	}
 	
@@ -158,9 +163,14 @@ public class NetFrame
 		this.fc = tempfc;
 	}
 	
-	protected Type getFrameType()
+	void setInfo(String info)
 	{
-		return type;
+		if (info.length() > MAX_FRAME_SIZE)
+		{
+			this.infoRemainder = info.substring(MAX_FRAME_SIZE+1);
+		}
+
+		this.info = info;
 	}
 	
 
@@ -209,6 +219,96 @@ public class NetFrame
 		return Integer.toBinaryString(SEQUENCE_NUMBER++ % 8);
 	}
 	
+	/**
+	 * Takes a string as input from which to create this frame.
+	 * 
+	 * @param frame {@code String} representation of this frame.
+	 * @throws UnknownHostException 
+	 * @throws IndexOutOfBoundsException 
+	 * @throws NumberFormatException 
+	 */
+	void fromString(String frame)
+			throws NumberFormatException, IndexOutOfBoundsException, UnknownHostException
+	{
+		frame.replaceAll(FLAG, "");
+		this.addr = getAddrFromBinary(frame.substring(0, 4*8));	
+		this.fc = frame.substring(4*8, 5*8);
+		
+		if (fc.charAt(0) == '0')
+		{
+			this.type = NetFrame.Type.IFrame;
+		}
+		else if (fc.charAt(1) == '0')
+		{
+			this.type = NetFrame.Type.SFrame;
+		}
+		else
+		{
+			this.type = NetFrame.Type.UFrame;
+		}
+		
+		switch (this.type) {
+		// User data frame
+		case IFrame:
+			this.cc = null;
+			try
+			{
+				this.info = frame.substring(5*8, frame.length() - 1);
+			}
+			catch (Exception e)
+			{
+				this.info = "";
+			}
+			break;
+		
+		// Control frame
+		case SFrame:
+			this.cc = CC.inverse().get(fc.substring(2, 4));
+			this.info = null;
+			break;
+			
+		// Unnumbered frame for link management
+		case UFrame:
+			this.cc = CC.inverse().get(fc.substring(2, 4) + fc.substring(2, 8));
+			break;
+		}
+		
+	}
+
+	//*******************************GETTER METHODS************************************//
+	
+	InetAddress getDestinationAddress()
+	{
+		return this.addr;
+	}
+	
+	String getInfo()
+	{
+		return this.info;
+	}
+	
+	Type getFrameType()
+	{
+		return type;
+	}
+	
+	/**
+	 * Returns this {@code NetFrame}'s {@code ControlCode}.
+	 * 
+	 * @return
+	 */
+	ControlCode getCC()
+	{
+		return this.cc;
+	}
+	
+	String getRemaining ()
+	{
+		return this.infoRemainder;
+	}
+	
+	//*******************************HELPER METHODS************************************//
+	
 	static String getAddrInBinary(Object Addr)
 	{
 		String res = "";
@@ -225,80 +325,27 @@ public class NetFrame
 	 * this method will convert each block of 8 chars into
 	 * a decimal number to form an IP address.
 	 * @param Addr the {@code String} representing an IP in binary
-	 * @return the decimal formatted IP.
+	 * @return the IP.
+	 * @throws IndexOutOfBoundsException
+	 * @throws NumberFormatException
+	 * @throws UnknownHostException
 	 */
-	static String getAddrFromBinary(Object Addr)
-			throws IndexOutOfBoundsException, NumberFormatException
+	static InetAddress getAddrFromBinary(Object Addr)
+			throws IndexOutOfBoundsException, NumberFormatException, UnknownHostException
 	{
 		String addr = "", binaryNum = Addr.toString();
 		
 		for (int i = 0; i < 4; i++)
 		{
-			binaryNum = addr.substring(i*8, i*8 + 7);
+			binaryNum = binaryNum.substring(i*8, i*8 + 7);
 			addr += Integer.parseInt(binaryNum);
+			
+			if (i != 3)
+				addr += ".";
 		}
 		
-		return addr;
+		return InetAddress.getByName(addr);
 	}
-	
-	InetAddress getDestinationAddress()
-	{
-		if (this.type != Type.IFrame)
-			return null;
-		
-		return null;
-	}
-	
-	String getInfo()
-	{
-		return "";
-	}
-	
-	/**
-	 * 
-	 * 
-	 * @return
-	 */
-	ControlCode getCC()
-	{
-		ControlCode cc;
-		
-		// FIXME getCC from binary
-		cc = CC.inverse().get("");
-		
-		return cc;
-	}
-	
-	/**
-	 * Takes a string as input from which to create this frame.
-	 * 
-	 * @param frame {@code String} representation of this frame.
-	 */
-	void fromString(String frame)
-	{
-		frame.replaceAll(FLAG, "");
-		this.addr = getAddrFromBinary(frame.substring(0, 4*8));	
-		this.fc = frame.substring(4*8, 5*8);
-		this.info = frame.substring(5*8, frame.length() - 1);
-		
-		if (fc.charAt(0) == '0')
-		{
-			this.type = NetFrame.Type.IFrame;
-		}
-		else if (fc.charAt(1) == '0')
-		{
-			this.type = NetFrame.Type.SFrame;
-		}
-		else
-		{
-			this.type = NetFrame.Type.UFrame;
-		}
-		
-
-		this.cc = getCC();
-	}
-	
-	//*******************************HELPER METHODS************************************//
 	
 	/**
 	 * 

@@ -51,82 +51,66 @@ public class MyServer
 	public static void pollStations(LinkedList<ClientConnection> clientConnections) throws IOException
 	{
 		
-            for (ClientConnection connection : clientConnections)
-            {
-                NetFrame rrxp = new NetFrame((Object)connection.getAddress(), Type.SFrame, ControlCode.RR);
-                rrxp.setPollFinal(true);
-                connection.send(rrxp.toString());
-                
-                                    
-                String message = connection.read();
-                NetFrame rrxp_read = new NetFrame(message);
-
-                if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getCC() == ControlCode.RR)
-                {
-                    //Received RR frame
-                    System.out.println("Station " + connection.getAddress() + " is read to receive");
-                }
-                else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getCC() == ControlCode.RR)
-                {
-                    //Right branch
-                    InetAddress destination = rrxp_read.getDestinationAddress();
-                    
-                    boolean found = false;
-                    for (ClientConnection otherConnection : clientConnections)
-                    {
-                        if (destination.equals(otherConnection.getAddress()))
-                        {
-                            otherConnection.addMessage(message);
-                            found = true;
-                        }
-                    }
-                    
-                    if (!found)
-                    {
-                        consume(rrxp_read);
-                    }
-                    
-                }
+        for (ClientConnection connection : clientConnections)
+        {
+            NetFrame rrxp = new NetFrame(connection.getAddress(), Type.SFrame, ControlCode.RR);
+            rrxp.setPollFinal(true);
+            connection.send(rrxp.toString());
             
-                
-                
+                                
+            String message = connection.read();
+            NetFrame rrxp_read = new NetFrame(message);
+
+            if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getCC() == ControlCode.RR)
+            {
+                //Received RR frame
+                System.out.println("Station " + connection.getAddress() + " is read to receive");
             }
+            else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getCC() == ControlCode.RR)
+            {
+                //Right branch
+                InetAddress destination = rrxp_read.getDestinationAddress();
                 
-
+                boolean found = false;
+                for (ClientConnection otherConnection : clientConnections)
+                {
+                    if (destination.equals(otherConnection.getAddress()))
+                    {
+                        otherConnection.addMessage(message);
+                        found = true;
+                    }
+                }
                 
-
+                if (!found)
+                {
+                    consume(rrxp_read);
+                }
+            }
+        }
 	}
         
-        
-        public static void handShake(ClientConnection connection) throws IOException
+    public static void handShake(ClientConnection connection) throws IOException
+    {
         {
-            {
-                NetFrame snrm = new NetFrame((Object)connection.getAddress(), Type.UFrame, ControlCode.SNRM);
-                connection.send(snrm.toString());
-            }
-            
-            {
-                String message = connection.read();
-                NetFrame ua = new NetFrame(message);
-
-                if (ua.getFrameType() != Type.UFrame || ua.getCC() != ControlCode.UA)
-                {
-                    System.out.println("ERROR : Did not receive UA frame from " + connection.getAddress());
-                }
-            }
-            
-            
-            
+            NetFrame snrm = new NetFrame(connection.getAddress(), Type.UFrame, ControlCode.SNRM);
+            connection.send(snrm.toString());
         }
+        {
+            String message = connection.read();
+            NetFrame ua = new NetFrame(message);
+
+            if (ua.getFrameType() != Type.UFrame || ua.getCC() != ControlCode.UA)
+            {
+                System.out.println("ERROR : Did not receive UA frame from " + connection.getAddress());
+            }
+        }    
+    }
 	
 	public static void main(String[] args) throws IOException
 	{
-		
 		ServerSocket serverSocket = null;
 		LinkedList<ClientConnection> clientConnections = new LinkedList<ClientConnection>();
-		
-
-				
+			
 		try
 		{
 			serverSocket = new ServerSocket(LISTEN_PORT);
@@ -139,36 +123,32 @@ public class MyServer
 		
 		serverSocket.setSoTimeout(SERVER_SOCKET_TIMEOUT);
                 
-                boolean connected = false;
+        boolean connected = false;
+        
+        //During the simulation, 2 clients must be connected. Allow them to connect before simulation
+        while (true)
+        {
+            try
+            {
+                System.err.print("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
+                clientConnections.add(new ClientConnection(serverSocket.accept()));
                 
-                //During the simulation, 2 clients must be connected. Allow them to connect before simulation
-                while (true)
-                {
-                    try
-                    {
-                            System.err.print("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
-                            clientConnections.add(new ClientConnection(serverSocket.accept()));
-                            
-                            handShake(clientConnections.getLast());
-                            connected = true;
-                    }
-                    catch (InterruptedIOException e) 
-                    {
-                            //Timeout, process queued messages
-                    }	
-                    
-                    
-                            pollStations(clientConnections);
-                            sendMessages(clientConnections);
+                handShake(clientConnections.getLast());
+                connected = true;
+            }
+            catch (InterruptedIOException e) 
+            {
+                    //Timeout, process queued messages
+            }	
+            
+            pollStations(clientConnections);
+            sendMessages(clientConnections);
 
-                            if (clientConnections.size() == 0 && connected)
-                            {
-                                    break;
-                            }
-                    
-                    
-                }
-		
+            if (clientConnections.size() == 0 && connected)
+            {
+                break;
+            }
+        }
 		
 		// We have escaped the listen loop; close the server.
 		serverSocket.close();
@@ -178,9 +158,6 @@ public class MyServer
 			clientConnection.close();
 		}
 	}
-}
-
-
 
 //			NetFrame pollFrame = new NetFrame(connection.socket.getInetAddress().toString(),Type.IFrame, NetFrame.ControlCode.RNR);
 //			connection.enqueue(pollFrame.toString());
@@ -196,3 +173,5 @@ public class MyServer
 //					connection.addMessage(pollResult.getInfo);
 //				}
 //			}
+	
+}

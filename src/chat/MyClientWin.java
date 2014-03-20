@@ -43,7 +43,8 @@ public class MyClientWin extends Applet implements Runnable
 	
 	Thread thread;
 	
-	private static ServerConnection serverConnection;
+	private ServerConnection serverConnection;
+	private Window receptionWindow, sendingWindow;
 	
 	@Override
 	public void init()
@@ -135,7 +136,7 @@ public class MyClientWin extends Applet implements Runnable
                                     System.out.println("ERROR : Did not receive SNRM frame from " + serverConnection.getAddress());
                                 }
                                 
-                                NetFrame ua = new NetFrame((Object)serverConnection.getAddress(), Type.UFrame, ControlCode.UA);
+                                NetFrame ua = new NetFrame(serverConnection.getAddress(), Type.UFrame, ControlCode.UA);
                                 serverConnection.send(ua.toString());
                                 
 				sConnection = "Connected to the chat server!";
@@ -234,23 +235,18 @@ public class MyClientWin extends Applet implements Runnable
 	}
 	
 	/**
-	 * FIXME
+	 * FIXME server interaction
 	 * checkServer - this is a main client algorithm
 	 */
 	public void checkServer()
 	{
-
-
-		
 		try
 		{
 			if ((fromServer = serverConnection.read()) != null)
 			{
 				NetFrame receivedFrame = new NetFrame(fromServer);
 
-				//
 				// switch on type of frame
-				//
 				switch(receivedFrame.getFrameType())
 				{
 					case IFrame:
@@ -259,34 +255,36 @@ public class MyClientWin extends Applet implements Runnable
 						textArea.setText(textArea.getText() + "\n" + fromServer); // put message on screen
 						break;
 						
-					case SFrame:
-						if (receivedFrame.getCC() == ControlCode.RR)
+					case SFrame: case UFrame:
+						switch (receivedFrame.getCC())
                         {
-                            //Something to send
-                            if (fromUser != null)
-                            {
-                                NetFrame toSend = new NetFrame((Object)serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
-                                serverConnection.send(toSend.toString());
-                                fromUser = null;
-                            }
-                            //Nothing to send
-                            else
-                            {
-                               NetFrame toSend = new NetFrame((Object)serverConnection.getAddress(), Type.SFrame, ControlCode.RR); 
-                               serverConnection.send(toSend.toString()); 
-                            }
+							case RR:
+	                            //Something to send via IFrame
+	                            if (fromUser != null)
+	                            {
+	                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
+	                                toSend.setPollFinal(true);
+	                                serverConnection.send(toSend.toString());
+	                                while (toSend.getRemaining() != null)
+	                                {
+	                                	toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, toSend.getRemaining());
+	                                    toSend.setPollFinal(true);
+	                                	serverConnection.send(toSend.toString());
+	                                }
+	                                fromUser = null;
+	                            }
+	                            //Nothing to send
+	                            else
+	                            {
+	                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.SFrame, ControlCode.RR);
+	                               serverConnection.send(toSend.toString()); 
+	                            }
+	                        default:
+	                            System.out.println("Error: did not receive RR control code");
+	                            break;
                         }
-                        else
-                        {
-                            System.out.println("Error: did not receive RR control code");
-                        }
-						break;
-						
-					case UFrame:
-                        //Ignore
 						break;
 				}
-				
 			}
 		}
 		// catch exceptions while reading/writing from/to server
