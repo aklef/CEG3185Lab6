@@ -10,6 +10,7 @@ import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.LinkedList;
 
 /**
  * @author Andréas K.LeF.
@@ -17,8 +18,11 @@ import java.net.Socket;
  */
 class Connection
 {
+	protected static final int SOCKET_TIMEOUT = 2000;
 	Socket socket;
 	PrintWriter writer;
+	protected LinkedList<String> messageQueue;
+	Window framesWindow;
 	BufferedReader reader;
 	
 	public Connection(Socket socket) throws IOException
@@ -27,6 +31,12 @@ class Connection
 		
 		writer = new PrintWriter(socket.getOutputStream(), true);
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		
+		System.out.println("Connection from " + socket.getInetAddress() + " accepted.");
+		socket.setSoTimeout(SOCKET_TIMEOUT);
+		
+		messageQueue = new LinkedList<String>();
+		messageQueue.addLast(" " + reader.readLine() + " joined");
 	}
 	
 	void send(String message)
@@ -68,5 +78,19 @@ class Connection
 		{
 			System.out.println(e);
 		}
+	}
+
+	protected void enqeue(String message) {
+		messageQueue.add(message);
+	}
+
+	/**
+	 * Retourne les message et les claires
+	 * @return List of messages.
+	 */
+	protected LinkedList<String> getMessages() {
+		LinkedList<String> temp = messageQueue;
+		messageQueue = new LinkedList<String>();
+		return temp;
 	}
 }

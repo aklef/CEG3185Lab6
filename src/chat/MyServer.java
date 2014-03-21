@@ -24,9 +24,9 @@ public class MyServer
 	 * 
 	 * @param clients List of {@code ClientConnection}s to message.
 	 */
-	public static void sendMessages(LinkedList<ClientConnection> clients)
+	public static void sendMessages(LinkedList<Connection> clients)
 	{
-		for (ClientConnection currentClient : clients)
+		for (Connection currentClient : clients)
 		{
 			LinkedList<String> currentClientMessages = currentClient.getMessages();
 			
@@ -52,10 +52,10 @@ public class MyServer
 	 * @param clientConnections List each <code>ClientConnection<code> to poll.
 	 * @throws IOException Error reading from client connection.
 	 */
-	public static void pollStations(LinkedList<ClientConnection> clientConnections) throws IOException
+	public static void pollStations(LinkedList<Connection> clientConnections) throws IOException
 	{
 		
-        for (ClientConnection connection : clientConnections)
+        for (Connection connection : clientConnections)
         {
             NetFrame rrxp = new NetFrame(connection.getAddress(), Type.SFrame, ControlCode.RR);
             rrxp.setPollFinal(true);
@@ -76,7 +76,7 @@ public class MyServer
                 InetAddress destination = rrxp_read.getDestinationAddress();
                 
                 boolean found = false;
-                for (ClientConnection otherConnection : clientConnections)
+                for (Connection otherConnection : clientConnections)
                 {
                     if (destination.equals(otherConnection.getAddress()))
                     {
@@ -93,7 +93,7 @@ public class MyServer
         }
 	}
         
-    public static void handShake(ClientConnection connection) throws IOException
+    public static void handShake(Connection connection) throws IOException
     {
         {
             NetFrame snrm = new NetFrame(connection.getAddress(), Type.UFrame, ControlCode.SNRM);
@@ -113,7 +113,7 @@ public class MyServer
 	public static void main(String[] args) throws IOException
 	{
 		ServerSocket serverSocket = null;
-		LinkedList<ClientConnection> clientConnections = new LinkedList<ClientConnection>();
+		LinkedList<Connection> clientConnections = new LinkedList<Connection>();
 			
 		try
 		{
@@ -134,15 +134,17 @@ public class MyServer
         {
             try
             {
-                System.err.print("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
-                clientConnections.add(new ClientConnection(serverSocket.accept()));
+                System.err.println("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
+                clientConnections.add(new Connection(serverSocket.accept()));
                 
                 handShake(clientConnections.getLast());
                 connected = true;
             }
             catch (InterruptedIOException e) 
             {
-                    //Timeout, process queued messages
+            	//Timeout, process queued messages
+            	
+            	
             }	
             
             pollStations(clientConnections);
@@ -157,7 +159,7 @@ public class MyServer
 		// We have escaped the listen loop; close the server.
 		serverSocket.close();
 		
-		for (ClientConnection clientConnection : clientConnections)
+		for (Connection clientConnection : clientConnections)
 		{
 			clientConnection.close();
 		}

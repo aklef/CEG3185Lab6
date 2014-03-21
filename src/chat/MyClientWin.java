@@ -241,7 +241,6 @@ public class MyClientWin extends Applet implements Runnable
 	}
 	
 	/**
-	 * FIXME server interaction
 	 * checkServer - this is a main client algorithm
 	 */
 	public void checkServer()
