@@ -36,11 +36,15 @@ public class MyServer
 			}
 		}
 	}
-        
-        public static void consume(NetFrame received)
-        {
-            System.out.println("Consumed : " + received);
-        }
+    
+	/**
+	 * This method prints out the frame to console. But why?
+	 * @param received
+	 */
+    public static void consume(NetFrame received)
+    {
+        System.out.println("Consumed : " + received);
+    }
 	
 	/**
 	 * Accepts a list of <code>clientConnections<code> to poll.
@@ -76,7 +80,7 @@ public class MyServer
                 {
                     if (destination.equals(otherConnection.getAddress()))
                     {
-                        otherConnection.addMessage(message);
+                        otherConnection.enqeue(message);
                         found = true;
                     }
                 }

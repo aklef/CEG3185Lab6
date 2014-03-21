@@ -43,8 +43,7 @@ public class MyClientWin extends Applet implements Runnable
 	
 	Thread thread;
 	
-	private ServerConnection serverConnection;
-	private Window receptionWindow, sendingWindow;
+	private Connection serverConnection;
 	
 	@Override
 	public void init()
@@ -119,7 +118,7 @@ public class MyClientWin extends Applet implements Runnable
 				
 				// connect to the socket
 				
-				serverConnection = new ServerConnection(new Socket(serverIP, serverPort));
+				serverConnection = new Connection(new Socket(serverIP, serverPort));
 
 				
 				// optional - setting socket timeout to 5 secs
@@ -202,22 +201,26 @@ public class MyClientWin extends Applet implements Runnable
 		MyClientWin app = new MyClientWin();
 		Frame frame = new Frame("Dinotalk - Chatting Program");
 		app.init();
-		app.start();
 		
 		frame.add("Center", app);
 		frame.setSize(400, 400);
+
+		app.start(); // client starts listening
 		frame.setVisible(true);
 	}
 	
 	/**
 	 * Stop server.
 	 */
-	@SuppressWarnings("deprecation")
 	@Override
 	public void stop()
 	{
-		thread.interrupt();
-		thread.stop();
+		try
+		{
+			thread.interrupt();
+		}
+		catch(Exception e){}
+		
 	}
 	
 	/**
@@ -229,7 +232,10 @@ public class MyClientWin extends Applet implements Runnable
 		while (true)
 		{
 			checkServer();
-			try	{Thread.sleep(10);}
+			try	
+			{
+				Thread.sleep(100);
+			}
 			catch (InterruptedException e){}
 		}
 	}
@@ -264,7 +270,11 @@ public class MyClientWin extends Applet implements Runnable
 	                            {
 	                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
 	                                toSend.setPollFinal(true);
+	                                
+	                                // FIXME enqeue frames in window, check windows for frames to send
+	                                
 	                                serverConnection.send(toSend.toString());
+	                                
 	                                while (toSend.getRemaining() != null)
 	                                {
 	                                	toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, toSend.getRemaining());
@@ -287,7 +297,6 @@ public class MyClientWin extends Applet implements Runnable
 				}
 			}
 		}
-		// catch exceptions while reading/writing from/to server
 		catch (Exception e)
 		{
 			serverConnection.close();

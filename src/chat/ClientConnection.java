@@ -7,23 +7,23 @@ import java.util.LinkedList;
 public class ClientConnection extends Connection
 {	
 	LinkedList<String> messageQueue;
-	Window sendingWindow, receivingWindow; 
+	Window framesWindow; 
 	
-	private static final int SERVER_SOCKET_TIMEOUT = 2000; 
+	private static final int SOCKET_TIMEOUT = 2000; 
 	
 	ClientConnection(Socket socket) throws IOException
 	{
 		super (socket);
 		
 		System.out.println("Connection from " + socket.getInetAddress() + " accepted.");
-		socket.setSoTimeout(SERVER_SOCKET_TIMEOUT);
+		socket.setSoTimeout(SOCKET_TIMEOUT);
 		System.out.println("Client accepted");
 		
 		messageQueue = new LinkedList<String>();
 		messageQueue.addLast(" " + reader.readLine() + " joined");
 	}
 	
-	void addMessage(String message)
+	void enqeue(String message)
 	{
 		messageQueue.add(message);
 	}

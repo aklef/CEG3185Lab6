@@ -15,10 +15,8 @@ import java.net.Socket;
  * @author Andréas K.LeF.
  *
  */
-abstract class Connection
+class Connection
 {
-	@SuppressWarnings("unused")
-	private static int RECEIVED_SEQUENCE_NUMBER = 0;
 	Socket socket;
 	PrintWriter writer;
 	BufferedReader reader;
@@ -31,17 +29,15 @@ abstract class Connection
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 	}
 	
-	public void send(String message)
+	void send(String message)
 	{
-		// Parse input
-		
 		writer.println(message);
 	}
         
-        public InetAddress getAddress()
-        {
-            return socket.getInetAddress();
-        }
+    InetAddress getAddress()
+    {
+        return socket.getInetAddress();
+    }
 	
 	String read() throws IOException
 	{

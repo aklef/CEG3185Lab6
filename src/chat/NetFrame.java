@@ -251,25 +251,19 @@ public class NetFrame
 		// User data frame
 		case IFrame:
 			this.cc = null;
-			try
-			{
-				this.info = frame.substring(5*8, frame.length() - 1);
-			}
-			catch (Exception e)
-			{
-				this.info = "";
-			}
+			this.info = frame.substring(5*8, frame.length() - 1);
 			break;
 		
 		// Control frame
 		case SFrame:
 			this.cc = CC.inverse().get(fc.substring(2, 4));
-			this.info = null;
+			this.info = "";
 			break;
 			
 		// Unnumbered frame for link management
 		case UFrame:
 			this.cc = CC.inverse().get(fc.substring(2, 4) + fc.substring(2, 8));
+			this.info = "";
 			break;
 		}
 		
