@@ -46,8 +46,8 @@ public class NetFrame
 	static
     {
 		FC = HashBiMap.create();
-		FC.put(Type.IFrame, "0NSPNR");
-		FC.put(Type.SFrame, "10CCPNR");
+		FC.put(Type.IFrame, "0NSPNR00");
+		FC.put(Type.SFrame, "10CCPNR0");
 		FC.put(Type.UFrame, "11CCPBBB");
     }
 	public static enum ControlCode
@@ -55,20 +55,22 @@ public class NetFrame
 		RR, RNR, REJ, SREJ, 
 		SNRM, SNRME, SIM, DISC, UA, RD, RIM, UI, UP, RSET, XID, FRMR;
 	}
+        
 	private static BiMap<ControlCode, String> CC;
-	static
+	
+        static
     {
 		CC = HashBiMap.create();
-		CC.put(ControlCode.RR, "00");
-		CC.put(ControlCode.RNR, "01");
-		CC.put(ControlCode.REJ, "10");
-		CC.put(ControlCode.SREJ, "11");
+		CC.put(ControlCode.RR, "00XXX");
+		CC.put(ControlCode.RNR, "01XXX");
+		CC.put(ControlCode.REJ, "10XXX");
+		CC.put(ControlCode.SREJ, "11XXX");
 		
 		CC.put(ControlCode.SNRM,  "00001");
 		CC.put(ControlCode.SNRME, "11011");
 		CC.put(ControlCode.SIM,   "11000");
 		CC.put(ControlCode.DISC,  "00010");
-		CC.put(ControlCode.RD,    "00010");
+//		CC.put(ControlCode.RD,    "00010");
 		CC.put(ControlCode.UA,    "00110");
 		CC.put(ControlCode.RIM,   "10000");
 		CC.put(ControlCode.UI,    "00000");
@@ -126,7 +128,7 @@ public class NetFrame
 	public NetFrame (InetAddress destAddr, Type type, ControlCode code, String info)
 	{
 		this.addr = destAddr;
-		this.setInfo(info);
+                this.setInfo(info);
 		this.setType(type, code);
 	}
 	
@@ -192,7 +194,8 @@ public class NetFrame
 	@Override
 	public String toString()
 	{
-		String frame = FLAG + addr + cc;
+		//String frame = FLAG + getAddrInBinary(addr) + CC.get(cc);
+                String frame = getAddrInBinary(addr) + FC.get(this.type)  + CC.get(cc);
 		
 		switch (this.type) {
 			case IFrame:
@@ -206,7 +209,8 @@ public class NetFrame
 				frame += info;
 				break;
 		}
-		return (frame + FLAG);
+		//return (frame + FLAG);
+                return frame;
 	}
 	
 	protected int getReceivedFrameIndex()
@@ -230,10 +234,15 @@ public class NetFrame
 	void fromString(String frame)
 			throws NumberFormatException, IndexOutOfBoundsException, UnknownHostException
 	{
-		frame.replaceAll(FLAG, "");
-		this.addr = getAddrFromBinary(frame.substring(0, 4*8));	
-		this.fc = frame.substring(4*8, 5*8);
+		//frame = frame.replaceAll(FLAG, "");
+                
+
+		this.addr = getAddrFromBinary(frame.substring(0, 32));	
+
+		this.fc = frame.substring(32, 40);
+                this.cc = CC.inverse().get(frame.substring(40, 45));
 		
+                
 		if (fc.charAt(0) == '0')
 		{
 			this.type = NetFrame.Type.IFrame;
@@ -249,22 +258,19 @@ public class NetFrame
 		
 		switch (this.type) {
 		// User data frame
-		case IFrame:
-			this.cc = null;
-			this.info = frame.substring(5*8, frame.length() - 1);
-			break;
-		
-		// Control frame
-		case SFrame:
-			this.cc = CC.inverse().get(fc.substring(2, 4));
-			this.info = "";
-			break;
-			
-		// Unnumbered frame for link management
-		case UFrame:
-			this.cc = CC.inverse().get(fc.substring(2, 4) + fc.substring(2, 8));
-			this.info = "";
-			break;
+                    case IFrame:
+                            this.info = frame.substring(45, frame.length());
+                            break;
+
+                    // Control frame
+                    case SFrame:
+                            this.info = "";
+                            break;
+
+                    // Unnumbered frame for link management
+                    case UFrame:
+                            this.info = "";
+                            break;
 		}
 		
 	}
@@ -303,17 +309,26 @@ public class NetFrame
 	
 	//*******************************HELPER METHODS************************************//
 	
-	static String getAddrInBinary(Object Addr)
+	static String getAddrInBinary(InetAddress addr)
 	{
 		String res = "";
 		
-		for (String threeDigitNum : Addr.toString().split("."))
+                
+                
+		for (String threeDigitNum : addr.toString().substring(1).split("\\."))
 		{
-			res += Integer.toBinaryString(Integer.parseInt(threeDigitNum));
+                    res += padLeft(Integer.toBinaryString(Integer.parseInt(threeDigitNum)));
 		}
+                
 		return res;
 	}
 	
+        public static String padLeft(String s) {
+            while (s.length() != 8)
+                s = "0" + s;
+            return s;
+        }
+
 	/**
 	 * Assuming the input is a string 4*8 chars in length,
 	 * this method will convert each block of 8 chars into
@@ -324,21 +339,23 @@ public class NetFrame
 	 * @throws NumberFormatException
 	 * @throws UnknownHostException
 	 */
-	static InetAddress getAddrFromBinary(Object Addr)
+	static InetAddress getAddrFromBinary(String addr)
 			throws IndexOutOfBoundsException, NumberFormatException, UnknownHostException
 	{
-		String addr = "", binaryNum = Addr.toString();
+		String result = "";
+                String temp;
 		
-		for (int i = 0; i < 4; i++)
+		for (int i = 0; i < 32; i+=8)
 		{
-			binaryNum = binaryNum.substring(i*8, i*8 + 7);
-			addr += Integer.parseInt(binaryNum);
-			
-			if (i != 3)
-				addr += ".";
+			temp = addr.substring(i, i + 8);
+                        
+			result += Integer.parseInt(temp, 2);		
+                        result += ".";
 		}
 		
-		return InetAddress.getByName(addr);
+                result = result.substring(0, result.length() - 1);
+                
+		return InetAddress.getByName(result);
 	}
 	
 	/**

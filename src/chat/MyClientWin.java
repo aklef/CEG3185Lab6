@@ -121,6 +121,7 @@ public class MyClientWin extends Applet implements Runnable
 				serverConnection = new Connection(new Socket(serverIP, serverPort));
 
 				
+                                System.out.println("Connected");
 				// optional - setting socket timeout to 5 secs
 				// this is not necessary because application
 				// runs with multiple threads
@@ -128,6 +129,7 @@ public class MyClientWin extends Applet implements Runnable
 				// mySocket.setSoTimeout(5000);
 				
 				String received = serverConnection.read();
+                                System.out.println(received);
                                 NetFrame snrm = new NetFrame(received);
                                 
                                 if (snrm.getFrameType() != Type.UFrame || snrm.getCC() != ControlCode.SNRM)
@@ -255,43 +257,33 @@ public class MyClientWin extends Applet implements Runnable
 				switch(receivedFrame.getFrameType())
 				{
 					case IFrame:
-                        //Consume
-                        fromServer = receivedFrame.getInfo();
+                                                //Consume
+                                                fromServer = receivedFrame.getInfo();
 						textArea.setText(textArea.getText() + "\n" + fromServer); // put message on screen
 						break;
 						
 					case SFrame: case UFrame:
-						switch (receivedFrame.getCC())
-                        {
-							case RR:
-	                            //Something to send via IFrame
-	                            if (fromUser != null)
-	                            {
-	                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
-	                                toSend.setPollFinal(true);
-	                                
-	                                // FIXME enqeue frames in window, check windows for frames to send
-	                                
-	                                serverConnection.send(toSend.toString());
-	                                
-	                                while (toSend.getRemaining() != null)
-	                                {
-	                                	toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, toSend.getRemaining());
-	                                    toSend.setPollFinal(true);
-	                                	serverConnection.send(toSend.toString());
-	                                }
-	                                fromUser = null;
-	                            }
-	                            //Nothing to send
-	                            else
-	                            {
-	                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.SFrame, ControlCode.RR);
-	                               serverConnection.send(toSend.toString()); 
-	                            }
-	                        default:
-	                            System.out.println("Error: did not receive RR control code");
-	                            break;
-                        }
+                                                if (receivedFrame.getCC() == ControlCode.RR)
+                                                {
+                                                    //Something to send
+                                                    if (fromUser != null)
+                                                    {
+                                                        NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
+                                                        serverConnection.send(toSend.toString());
+                                                        fromUser = null;
+                                                    }
+                                                    //Nothing to send
+                                                    else
+                                                    {
+                                                       NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.SFrame, ControlCode.RR); 
+                                                       serverConnection.send(toSend.toString()); 
+                                                    }
+                                                }
+                                                else
+                                                {
+                                                    System.out.println("Error: did not receive RR control code");
+                                                }
+
 						break;
 				}
 			}

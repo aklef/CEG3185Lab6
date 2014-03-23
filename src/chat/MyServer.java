@@ -68,16 +68,21 @@ public class MyServer
             if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getCC() == ControlCode.RR)
             {
                 //Received RR frame
-                System.out.println("Station " + connection.getAddress() + " is read to receive");
+                System.out.println("Station " + connection.getAddress() + " is ready to receive");
             }
             else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getCC() == ControlCode.RR)
             {
+                System.out.println("message received");
+                
                 //Right branch
                 InetAddress destination = rrxp_read.getDestinationAddress();
                 
                 boolean found = false;
                 for (Connection otherConnection : clientConnections)
                 {
+                    if (otherConnection.equals(connection))
+                        continue;
+                    
                     if (destination.equals(otherConnection.getAddress()))
                     {
                         otherConnection.enqeue(message);

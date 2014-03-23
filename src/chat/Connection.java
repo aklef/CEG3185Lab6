@@ -33,10 +33,10 @@ class Connection
 		reader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		
 		System.out.println("Connection from " + socket.getInetAddress() + " accepted.");
-		socket.setSoTimeout(SOCKET_TIMEOUT);
+		//socket.setSoTimeout(SOCKET_TIMEOUT);
+                
+                messageQueue = new LinkedList<String>();
 		
-		messageQueue = new LinkedList<String>();
-		messageQueue.addLast(" " + reader.readLine() + " joined");
 	}
 	
 	void send(String message)
