@@ -178,7 +178,7 @@ public class MyClientWin extends Applet implements Runnable
 				// only one message can be stored into the
 				// buffer
 				//
-				fromUser = textField.getText();
+				fromUser = clientId + ": " + textField.getText();
 				textField.setText("");
 			}
 			else

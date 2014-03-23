@@ -18,7 +18,7 @@ public class MyServer
 	
 	/**
 	 * Send each connected client's queued messages to all other clients.
-	 * A very for-midable method.
+	 * 
 	 * 
 	 * The messages being broadcast are most likely {@code NetFrame}s in {@code String} form.
 	 * 
@@ -38,7 +38,7 @@ public class MyServer
 	}
     
 	/**
-	 * This method prints out the frame to console. But why?
+	 * This method consumes a frame. Other functionality can go here.
 	 * @param received
 	 */
     public static void consume(NetFrame received)
@@ -71,18 +71,15 @@ public class MyServer
                 System.out.println("Station " + connection.getAddress() + " is ready to receive");
             }
             else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getCC() == ControlCode.RR)
-            {
-                System.out.println("message received");
-                
+            {                
                 //Right branch
                 InetAddress destination = rrxp_read.getDestinationAddress();
                 
+                //For each connection, check if the address matches
+                //If so, queue it to send it there
                 boolean found = false;
                 for (Connection otherConnection : clientConnections)
                 {
-                    if (otherConnection.equals(connection))
-                        continue;
-                    
                     if (destination.equals(otherConnection.getAddress()))
                     {
                         otherConnection.enqeue(message);
