@@ -22,9 +22,16 @@ class Connection
 	Socket socket;
 	PrintWriter writer;
 	protected LinkedList<String> messageQueue;
+        
+        /**************************/
+        /* La fenetre coulissante */
+        /**************************/
 	Window framesWindow;
-	BufferedReader reader;
 	
+        
+        BufferedReader reader;
+        
+        
 	public Connection(Socket socket) throws IOException
 	{
 		this.socket = socket;
@@ -39,10 +46,29 @@ class Connection
 		
 	}
 	
-	void send(String message)
+	void send(NetFrame message) throws InterruptedException
 	{
-		writer.println(message);
+                if (framesWindow == null)
+                {
+                    framesWindow = new Window(this);
+
+                }
+            
+                //writer.println(message);
+            
+		framesWindow.add(message);
+
 	}
+        
+        void sendSRS(NetFrame message)
+        {
+            writer.println(message);
+        }
+        
+        void waitForAck() throws IOException
+        {
+            reader.readLine();
+        }
         
     InetAddress getAddress()
     {
@@ -54,7 +80,10 @@ class Connection
 		String result = null;
 		try
 		{
+                    
 			result = reader.readLine();
+                        writer.println("YOLOACK");
+                        
 		}
 		catch (InterruptedIOException e)
 		{

@@ -7,6 +7,7 @@ import java.util.LinkedList;
 
 import chat.NetFrame.Type;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 public class MyServer
 {
@@ -24,7 +25,7 @@ public class MyServer
 	 * 
 	 * @param clients List of {@code ClientConnection}s to message.
 	 */
-	public static void sendMessages(LinkedList<Connection> clients)
+	public static void sendMessages(LinkedList<Connection> clients) throws UnknownHostException, InterruptedException
 	{
 		for (Connection currentClient : clients)
 		{
@@ -32,7 +33,7 @@ public class MyServer
 			
 			for (String message : currentClientMessages)
 			{
-				currentClient.send(message);
+				currentClient.send(new NetFrame(message));
 			}
 		}
 	}
@@ -52,14 +53,14 @@ public class MyServer
 	 * @param clientConnections List each <code>ClientConnection<code> to poll.
 	 * @throws IOException Error reading from client connection.
 	 */
-	public static void pollStations(LinkedList<Connection> clientConnections) throws IOException
+	public static void pollStations(LinkedList<Connection> clientConnections) throws IOException, InterruptedException
 	{
 		
         for (Connection connection : clientConnections)
         {
             NetFrame rrxp = new NetFrame(connection.getAddress(), Type.SFrame, ControlCode.RR);
             rrxp.setPollFinal(true);
-            connection.send(rrxp.toString());
+            connection.send(rrxp);
             
                                 
             String message = connection.read();
@@ -95,11 +96,11 @@ public class MyServer
         }
 	}
         
-    public static void handShake(Connection connection) throws IOException
+    public static void handShake(Connection connection) throws IOException, InterruptedException
     {
         {
             NetFrame snrm = new NetFrame(connection.getAddress(), Type.UFrame, ControlCode.SNRM);
-            connection.send(snrm.toString());
+            connection.send(snrm);
         }
         {
             String message = connection.read();
@@ -112,7 +113,7 @@ public class MyServer
         }    
     }
 	
-	public static void main(String[] args) throws IOException
+	public static void main(String[] args) throws IOException, UnknownHostException, InterruptedException
 	{
 		ServerSocket serverSocket = null;
 		LinkedList<Connection> clientConnections = new LinkedList<Connection>();

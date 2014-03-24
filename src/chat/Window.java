@@ -3,50 +3,79 @@ package chat;
 import java.util.LinkedList;
 
 import chat.NetFrame;
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-/**
- * This class represents a sliding {@code NetFrame} window implemented using HDLC.
- * 
- * @author Andréas K.LeF.
- */
-@SuppressWarnings("serial")
-public class Window extends LinkedList<NetFrame>
+
+public class Window
 {
-	private static final int MAX_WINDOW_LENGTH = 2^6-1;
+	private static final int MAX_WINDOW_LENGTH = 7;
 	
+        NetFrame[] messageQueue;
+        Connection connection;
+        
 	/**
 	 * {@code NetFrame} index for sliding window.
 	 */
-	protected int currentFrameIndex = 0, receivedFrameIndex = 0, sentframeIndex = 0;
+	protected int L = 0, R = 8, M = 0;
 	
 	/**
 	 * Constructs an empty {@code LinkedList<Frame>}
 	 */
-	Window ()
+	Window (Connection connect)
 	{
-		super();
+                connection = connect;
+		messageQueue = new NetFrame[MAX_WINDOW_LENGTH];
 	}
 	
-	@Override
-	public boolean add (NetFrame newFrame)
+	public boolean add(NetFrame newFrame) throws InterruptedException
 	{
-		if (this.size() == MAX_WINDOW_LENGTH)
-		{
-			return false;
-		}
-		
-		this.add(newFrame);
-		
-		if (newFrame.type == NetFrame.Type.SFrame)
-		{
-			receivedFrameIndex = newFrame.getReceivedFrameIndex();
-		}
-		
-		return true;
-	}
 	
-	void acknowledgeReception (int currentFrameIndex)
-	{
-		this.currentFrameIndex = currentFrameIndex;
+            //Wait for window to catch up before sending message
+            while (M == R)
+            {
+                System.out.println("Waiting for window to slide");
+                Thread.sleep(1000);
+            }
+            
+            messageQueue[M++] = newFrame;
+            
+            if (M >= MAX_WINDOW_LENGTH)
+                M = 0;
+            
+            System.out.println("Added to window");
+            run();
+            return true;
 	}
+
+
+    public void run() {
+        
+
+            System.out.println("Looping");
+            if (M != L)
+            {
+                try {
+                    System.out.println("Sending");
+                    connection.sendSRS(messageQueue[L]);
+                    System.out.println("Acking");
+                    connection.waitForAck();
+                    System.out.println("Acked");
+                    L++;
+                    R++;
+                    
+                    if (L >= MAX_WINDOW_LENGTH)
+                        L = 0;
+                    
+                    if (R >= MAX_WINDOW_LENGTH)
+                        R = 0;
+                } catch (IOException ex) {
+                    Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+                } 
+                 
+            }
+           
+        }
+        
 }
