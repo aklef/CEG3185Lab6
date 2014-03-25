@@ -61,9 +61,9 @@ public class NetFrame
         static
     {
 		CC = HashBiMap.create();
-		CC.put(ControlCode.RR, "00XXX");
-		CC.put(ControlCode.RNR, "01XXX");
-		CC.put(ControlCode.REJ, "10XXX");
+		CC.put(ControlCode.RR,   "00XXX");
+		CC.put(ControlCode.RNR,  "01XXX");
+		CC.put(ControlCode.REJ,  "10XXX");
 		CC.put(ControlCode.SREJ, "11XXX");
 		
 		CC.put(ControlCode.SNRM,  "00001");
@@ -258,21 +258,20 @@ public class NetFrame
 		
 		switch (this.type) {
 		// User data frame
-                    case IFrame:
-                            this.info = frame.substring(45, frame.length());
-                            break;
+            case IFrame:
+                    this.info = frame.substring(45, frame.length());
+                    break;
 
-                    // Control frame
-                    case SFrame:
-                            this.info = "";
-                            break;
+            // Control frame
+            case SFrame:
+                    this.info = "";
+                    break;
 
-                    // Unnumbered frame for link management
-                    case UFrame:
-                            this.info = "";
-                            break;
+            // Unnumbered frame for link management
+            case UFrame:
+                    this.info = "";
+                    break;
 		}
-		
 	}
 
 	//*******************************GETTER METHODS************************************//
@@ -313,21 +312,19 @@ public class NetFrame
 	{
 		String res = "";
 		
-                
-                
 		for (String threeDigitNum : addr.toString().substring(1).split("\\."))
 		{
-                    res += padLeft(Integer.toBinaryString(Integer.parseInt(threeDigitNum)));
+            res += padLeft(Integer.toBinaryString(Integer.parseInt(threeDigitNum)));
 		}
                 
 		return res;
 	}
 	
-        public static String padLeft(String s) {
-            while (s.length() != 8)
-                s = "0" + s;
-            return s;
-        }
+    public static String padLeft(String s) {
+        while (s.length() != 8)
+            s = "0" + s;
+        return s;
+    }
 
 	/**
 	 * Assuming the input is a string 4*8 chars in length,
@@ -342,18 +339,17 @@ public class NetFrame
 	static InetAddress getAddrFromBinary(String addr)
 			throws IndexOutOfBoundsException, NumberFormatException, UnknownHostException
 	{
-		String result = "";
-                String temp;
+		String result = "", temp;
 		
 		for (int i = 0; i < 32; i+=8)
 		{
 			temp = addr.substring(i, i + 8);
                         
 			result += Integer.parseInt(temp, 2);		
-                        result += ".";
+            result += ".";
 		}
 		
-                result = result.substring(0, result.length() - 1);
+        result = result.substring(0, result.length() - 1);
                 
 		return InetAddress.getByName(result);
 	}
