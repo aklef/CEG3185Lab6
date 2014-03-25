@@ -16,6 +16,8 @@ import java.net.UnknownHostException;
 import javax.swing.JOptionPane;
 
 import chat.NetFrame.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class MyClientWin extends Applet implements Runnable
 {
@@ -129,6 +131,8 @@ public class MyClientWin extends Applet implements Runnable
 				// mySocket.setSoTimeout(5000);
 				
 				String received = serverConnection.read();
+                                
+                                
                                 System.out.println(received);
                                 NetFrame snrm = new NetFrame(received);
                                 
@@ -138,7 +142,12 @@ public class MyClientWin extends Applet implements Runnable
                                 }
                                 
                                 NetFrame ua = new NetFrame(serverConnection.getAddress(), Type.UFrame, ControlCode.UA);
-                                serverConnection.send(ua.toString());
+                                
+                                try {
+                                    serverConnection.send(ua);
+                                } catch (InterruptedException ex) {
+                                    Logger.getLogger(MyClientWin.class.getName()).log(Level.SEVERE, null, ex);
+                                }
                                 
 				sConnection = "Connected to the chat server!";
                                 
@@ -269,14 +278,14 @@ public class MyClientWin extends Applet implements Runnable
                                                     if (fromUser != null)
                                                     {
                                                         NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
-                                                        serverConnection.send(toSend.toString());
+                                                        serverConnection.send(toSend);
                                                         fromUser = null;
                                                     }
                                                     //Nothing to send
                                                     else
                                                     {
                                                        NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.SFrame, ControlCode.RR); 
-                                                       serverConnection.send(toSend.toString()); 
+                                                       serverConnection.send(toSend); 
                                                     }
                                                 }
                                                 else
