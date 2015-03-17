@@ -58,6 +58,7 @@ public class MyServer
 		
         for (Connection connection : clientConnections)
         {
+        	
             NetFrame rrxp = new NetFrame(connection.getAddress(), Type.SFrame, ControlCode.RR);
             rrxp.setPollFinal(true);
             connection.send(rrxp);

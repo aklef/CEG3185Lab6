@@ -1,6 +1,3 @@
-/**
- * 
- */
 package chat;
 
 import java.io.BufferedReader;
@@ -41,8 +38,8 @@ class Connection
 		
 		System.out.println("Connection from " + socket.getInetAddress() + " accepted.");
 		//socket.setSoTimeout(SOCKET_TIMEOUT);
-                
-                messageQueue = new LinkedList<String>();
+        
+		messageQueue = new LinkedList<String>();
 		
 	}
 	

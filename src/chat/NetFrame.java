@@ -11,7 +11,7 @@ import com.google.common.collect.HashBiMap;
 
 /**
  * Represents a single link-layer HDLC frame.
- * Each {@code NetFrame} has a designated {@code Type} {@code enum} value.
+ * Each {@code NetFrame} has a designated {@code Type} value.
  * 
  * @author Andréas K.LeF.
  */
@@ -21,6 +21,9 @@ public class NetFrame
 	private static final int MAX_FRAME_SIZE = 64*8;
 	private static int SEQUENCE_NUMBER = 0;
 	
+	/**
+	 * The HDLC frame type
+	 */
 	public static enum Type {
 		/**
 		 * User data frame. Contains actual user data that needs
@@ -58,7 +61,7 @@ public class NetFrame
         
 	private static BiMap<ControlCode, String> CC;
 	
-        static
+    static
     {
 		CC = HashBiMap.create();
 		CC.put(ControlCode.RR,   "00XXX");

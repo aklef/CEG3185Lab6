@@ -9,6 +9,8 @@ import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.TextArea;
 import java.awt.TextField;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
@@ -21,11 +23,7 @@ import java.util.logging.Logger;
 
 public class MyClientWin extends Applet implements Runnable
 {
-	/**
-	 * 
-	 */
 	private static final long serialVersionUID = 1702635793607554428L;
-	
 	static boolean bConnected = false;
 	
 
@@ -44,8 +42,9 @@ public class MyClientWin extends Applet implements Runnable
 	static TextArea textArea;
 	
 	Thread thread;
-	
 	private Connection serverConnection;
+	
+	/************************************************************************/
 	
 	@Override
 	public void init()
@@ -206,9 +205,7 @@ public class MyClientWin extends Applet implements Runnable
 	 */
 	public static void main(String args[])
 	{
-		//
 		// define window and call standard methods
-		//
 		MyClientWin app = new MyClientWin();
 		Frame frame = new Frame("Dinotalk - Chatting Program");
 		app.init();
@@ -218,6 +215,11 @@ public class MyClientWin extends Applet implements Runnable
 
 		app.start(); // client starts listening
 		frame.setVisible(true);
+		frame.addWindowListener(new WindowAdapter(){
+			public void windowClosing(WindowEvent we){
+				   System.exit(0);
+			}
+		});
 	}
 	
 	/**
