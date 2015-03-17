@@ -12,6 +12,7 @@ import java.util.LinkedList;
 /**
  * @author Andréas K.LeF.
  * @author David Alleyn
+ * @author Kent Hagerman
  *
  */
 class Connection

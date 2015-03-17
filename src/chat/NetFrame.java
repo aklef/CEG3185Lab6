@@ -14,6 +14,8 @@ import com.google.common.collect.HashBiMap;
  * Each {@code NetFrame} has a designated {@code Type} value.
  * 
  * @author Andréas K.LeF.
+ * @author David Alleyn
+ * @author Kent Hagerman
  */
 public class NetFrame
 {
