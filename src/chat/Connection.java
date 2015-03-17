@@ -23,13 +23,13 @@ class Connection
 	PrintWriter writer;
 	protected LinkedList<String> messageQueue;
         
-        /**************************/
-        /* La fenetre coulissante */
-        /**************************/
-	Window framesWindow;
+       /**
+        * La fenetre coulissante 
+        * 
+        **/
 	
-        
-        BufferedReader reader;
+	Window framesWindow;
+	BufferedReader reader;
         
         
 	public Connection(Socket socket) throws IOException

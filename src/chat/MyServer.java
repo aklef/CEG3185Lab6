@@ -137,7 +137,7 @@ public class MyServer
         {
             try
             {
-                System.err.println("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
+                //System.err.println("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
                 clientConnections.add(new Connection(serverSocket.accept()));
                 
                 handShake(clientConnections.getLast());
