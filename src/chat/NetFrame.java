@@ -17,17 +17,18 @@ import com.google.common.collect.HashBiMap;
  */
 public class NetFrame
 {
+	@SuppressWarnings("unused")
 	private static final String FLAG = "01111110";
 	private static final int MAX_FRAME_SIZE = 64*8;
 	private static int SEQUENCE_NUMBER = 0;
 	
 	/**
-	 * The HDLC frame type
+	 * The HDLC frame types.
 	 */
 	public static enum Type {
 		/**
-		 * User data frame. Contains actual user data that needs
-		 * to be extracted. Contains {@code NetFrame} sequence numbers
+		 * Information frame. Contains data that needs to be extracted.
+		 * Will contain {@code NetFrame} sequence numbers
 		 */
 		IFrame, 
 		/**
@@ -84,7 +85,12 @@ public class NetFrame
     }
 	
 	InetAddress addr;
-	private String fc, info, infoRemainder;
+	/**
+	 * Frame Control
+	 */
+	private String fc;
+	private String info;
+	private String infoRemainder;
 	protected String sequenceNumber;
 	
 	/**
@@ -238,14 +244,11 @@ public class NetFrame
 			throws NumberFormatException, IndexOutOfBoundsException, UnknownHostException
 	{
 		//frame = frame.replaceAll(FLAG, "");
-                
-
-		this.addr = getAddrFromBinary(frame.substring(0, 32));	
-
+        
+		this.addr = getAddrFromBinary(frame.substring(0, 32));
 		this.fc = frame.substring(32, 40);
-                this.cc = CC.inverse().get(frame.substring(40, 45));
-		
-                
+        this.cc = CC.inverse().get(frame.substring(40, 45));
+		                
 		if (fc.charAt(0) == '0')
 		{
 			this.type = NetFrame.Type.IFrame;
@@ -254,24 +257,20 @@ public class NetFrame
 		{
 			this.type = NetFrame.Type.SFrame;
 		}
-		else
+		else if (fc.charAt(1) == '1')
 		{
 			this.type = NetFrame.Type.UFrame;
 		}
 		
-		switch (this.type) {
-		// User data frame
+		switch (this.type)
+		{
+			// User data frame
             case IFrame:
                     this.info = frame.substring(45, frame.length());
                     break;
 
-            // Control frame
-            case SFrame:
-                    this.info = "";
-                    break;
-
-            // Unnumbered frame for link management
-            case UFrame:
+            // Control frame or nnumbered frame for link management
+            case SFrame: case UFrame:
                     this.info = "";
                     break;
 		}
