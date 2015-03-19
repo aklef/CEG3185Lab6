@@ -11,7 +11,7 @@ import com.google.common.collect.HashBiMap;
 
 /**
  * Represents a single link-layer HDLC frame.
- * Each {@code NetFrame} has a designated {@code Type} value.
+ * Each {@code NetFrame} has a designated {@code Frames} value.
  * 
  * @author Andréas K.LeF.
  * @author David Alleyn
@@ -27,7 +27,7 @@ public class NetFrame
 	/**
 	 * The HDLC frame types.
 	 */
-	public static enum Type {
+	public static enum Frames {
 		/**
 		 * Information frame. Contains data that needs to be extracted.
 		 * Will contain {@code NetFrame} sequence numbers
@@ -44,7 +44,7 @@ public class NetFrame
 		 */
 		UFrame;
 		
-		enum Command
+		enum Commands
 		{
 			// (S)upervisory-frame commands
 			/**
@@ -79,52 +79,39 @@ public class NetFrame
 	}
 		
 	/**
-	 * Placeholder {@code String}s for each {@code NetFrame} {@code Type}'s {@code ControlCode}.
+	 * Placeholder {@code String}s for each {@code NetFrame} {@code Frames}'s {@code ControlCode}.
 	 */
-	private static BiMap<Type, String> FC;
+	private static BiMap<Frames, String> FC;
 	static
     {
 		FC = HashBiMap.create();
-		FC.put(Type.IFrame, "0NSPNR00");
-		FC.put(Type.SFrame, "10CCPNR0");
-		FC.put(Type.UFrame, "11CCPBBB");
+		FC.put(Frames.IFrame, "0NSPNR00");
+		FC.put(Frames.SFrame, "10CCPNR0");
+		FC.put(Frames.UFrame, "11CCPBBB");
     }
-	
-	public static enum ControlCode
-	{
-		RR, RNR, REJ, SREJ, 
-		/**
-		 * Set normal response mode
-		 */
-		SNRM, 
-		/**
-		 * Set normal response extended mode 
-		 */
-		SNRME, SIM, DISC, UA, RD, RIM, UI, UP, RSET, XID, FRMR;
-	}
         
-	private static BiMap<ControlCode, String> CC;
+	private static BiMap<Frames.Commands, String> CC;
 	
     static
     {
 		CC = HashBiMap.create();
-		CC.put(ControlCode.RR,   "00XXX");
-		CC.put(ControlCode.RNR,  "01XXX");
-		CC.put(ControlCode.REJ,  "10XXX");
-		CC.put(ControlCode.SREJ, "11XXX");
+		CC.put(Frames.Commands.RR,   "00XXX");
+		CC.put(Frames.Commands.RNR,  "01XXX");
+		CC.put(Frames.Commands.REJ,  "10XXX");
+		CC.put(Frames.Commands.SREJ, "11XXX");
 		
-		CC.put(ControlCode.SNRM,  "00001");
-		CC.put(ControlCode.SNRME, "11011");
-		CC.put(ControlCode.SIM,   "11000");
-		CC.put(ControlCode.DISC,  "00010");
-//		CC.put(ControlCode.RD,    "00010");
-		CC.put(ControlCode.UA,    "00110");
-		CC.put(ControlCode.RIM,   "10000");
-		CC.put(ControlCode.UI,    "00000");
-		CC.put(ControlCode.UP,    "00100");
-		CC.put(ControlCode.RSET,  "11001");
-		CC.put(ControlCode.XID,   "11101");
-		CC.put(ControlCode.FRMR,  "10001");
+		CC.put(Frames.Commands.SNRM,  "00001");
+		CC.put(Frames.Commands.SNRME, "11011");
+		CC.put(Frames.Commands.SIM,   "11000");
+		CC.put(Frames.Commands.DISC,  "00010");
+//		CC.put(Frames.Commands.RD,    "00010");
+		CC.put(Frames.Commands.UA,    "00110");
+		CC.put(Frames.Commands.RIM,   "10000");
+		CC.put(Frames.Commands.UI,    "00000");
+		CC.put(Frames.Commands.UP,    "00100");
+		CC.put(Frames.Commands.RSET,  "11001");
+		CC.put(Frames.Commands.XID,   "11101");
+		CC.put(Frames.Commands.FRMR,  "10001");
     }
 	
 	InetAddress addr;
@@ -139,11 +126,11 @@ public class NetFrame
 	/**
 	 * The {@code ControlCode} this frame is carrying.
 	 */
-	protected ControlCode cc;
+	protected Frames.Commands cc;
 	/**
-	 * This {@code NetFrame}'s {@code Type}.
+	 * This {@code NetFrame}'s {@code Frames}.
 	 */
-	protected Type type;
+	protected Frames type;
 	
 	/**
 	 * Parses a binary string to create a {@code NetFrame}
@@ -163,7 +150,7 @@ public class NetFrame
 	/**
 	 * Used to create an {@code SFrame} from parameters.
 	 */
-	public NetFrame (InetAddress destAddr, Type type, ControlCode Code)
+	public NetFrame (InetAddress destAddr, Frames type, Frames.Commands Code)
 	{
 		this(destAddr, type, Code, "");
 	}
@@ -177,7 +164,7 @@ public class NetFrame
 	 * @param info client data.
 	 * @throws UnknownHostException 
 	 */
-	public NetFrame (InetAddress destAddr, Type type, ControlCode code, String info)
+	public NetFrame (InetAddress destAddr, Frames type, Frames.Commands code, String info)
 	{
 		this.addr = destAddr;
                 this.setInfo(info);
@@ -185,13 +172,13 @@ public class NetFrame
 	}
 	
 	/**
-	 * Sets this {@code NetFrame}'s {@code Type} and {@code ControlCode}
+	 * Sets this {@code NetFrame}'s {@code Frames} and {@code ControlCode}
 	 * by replacing placeolder values in {@code FC}.
 	 * 
-	 * @param type this {@code NetFrame}'s {@code Type} enum value
+	 * @param type this {@code NetFrame}'s {@code Frames} enum value
 	 * @param code the {@code ControlCode} of this {@code NetFrame}
 	 */
-	private void setType (Type type, ControlCode code)
+	private void setType (Frames type, Frames.Commands code)
 	{
 		this.type = type;
 		this.cc = code;
@@ -294,15 +281,15 @@ public class NetFrame
 		                
 		if (fc.charAt(0) == '0')
 		{
-			this.type = NetFrame.Type.IFrame;
+			this.type = NetFrame.Frames.IFrame;
 		}
 		else if (fc.charAt(1) == '0')
 		{
-			this.type = NetFrame.Type.SFrame;
+			this.type = NetFrame.Frames.SFrame;
 		}
 		else if (fc.charAt(1) == '1')
 		{
-			this.type = NetFrame.Type.UFrame;
+			this.type = NetFrame.Frames.UFrame;
 		}
 		
 		switch (this.type)
@@ -331,7 +318,7 @@ public class NetFrame
 		return this.info;
 	}
 	
-	Type getFrameType()
+	Frames getFrameType()
 	{
 		return type;
 	}
@@ -341,7 +328,7 @@ public class NetFrame
 	 * 
 	 * @return
 	 */
-	ControlCode getCC()
+	Frames.Commands getCC()
 	{
 		return this.cc;
 	}

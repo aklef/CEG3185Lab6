@@ -1,6 +1,7 @@
 package chat;
 
 import chat.NetFrame.*;
+
 import java.applet.Applet;
 import java.awt.Color;
 import java.awt.Font;
@@ -64,6 +65,7 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 		JButton closeButton = new JButton("Close");
 		// Button chkmsgbutton = new Button("Check Messages");
 		
+		textField.addKeyListener(this);
 		connectButton.addActionListener(this);
 		connectButton.addKeyListener(this);
 		closeButton.addActionListener(this);
@@ -89,7 +91,6 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	@Override
 	public void paint(Graphics g)
 	{
-		super.paint(g);
 		
 		Font fontb = new Font("Arial", Font.BOLD, 14);
 		
@@ -110,6 +111,8 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 		 * } if (fromServer) != null) { textArea.setText(textArea.getText()+
 		 * "\n" + fromServer); }
 		 */		
+		
+		super.paint(g);
 	}
 	
 	/**
@@ -165,6 +168,10 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
                 isConnected = true;
                 msgButton.setEnabled(true);
                 connectButton.setEnabled(false);
+                connectionStatus = "Connected to the chat server!";
+                
+                repaint();
+                
 				// optional - setting socket timeout to 5 secs
 				// this is not necessary because application
 				// runs with multiple threads
@@ -174,12 +181,12 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
                 System.out.println(received);
                 
                 NetFrame snrm = new NetFrame(received);
-                if (snrm.getFrameType() != Type.UFrame || snrm.getCC() != ControlCode.SNRM)
+                if (snrm.getFrameType() != Frames.UFrame || snrm.getCC() != Frames.Commands.SNRM)
                 {
                     System.out.println("ERROR : Did not receive SNRM frame from " + serverConnection.getAddress());
                 }
                 
-                NetFrame ua = new NetFrame(serverConnection.getAddress(), Type.UFrame, ControlCode.UA);
+                NetFrame ua = new NetFrame(serverConnection.getAddress(), Frames.UFrame, Frames.Commands.UA);
                 try
                 {
                     serverConnection.send(ua);
@@ -188,8 +195,6 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
                 {
                     Logger.getLogger(MyClientWin.class.getName()).log(Level.SEVERE, null, ex);
                 }
-                                
-				connectionStatus = "Connected to the chat server!";
                 
 				//
 				// define new thread
@@ -233,7 +238,7 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 			}
 			
 		}
-		//repaint();
+		repaint();
 	}
 	
 	/**
@@ -299,9 +304,6 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	@Override
 	public void keyPressed(KeyEvent key)
 	{
-		System.out.println("Pressed "+key);
-		System.out.println(key.getKeyCode()+" compared to "+KeyEvent.VK_ENTER);
-		
 		if (key.getKeyCode() == KeyEvent.VK_ENTER && key.getComponent().getClass() == JButton.class)
 		{
 			((JButton) key.getComponent()).doClick();
@@ -324,8 +326,10 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 		{
 			if ((fromServer = serverConnection.read()) != null)
 			{
+				System.out.println("Received Frame!");
+				
 				NetFrame receivedFrame = new NetFrame(fromServer);
-
+				
 				// switch on type of frame
 				switch(receivedFrame.getFrameType())
 				{
@@ -336,19 +340,19 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 						break;
 						
 					case SFrame: case UFrame:
-                        if (receivedFrame.getCC() == ControlCode.RR)
+                        if (receivedFrame.getCC() == Frames.Commands.RR)
                         {
                             //Something to send
                             if (fromUser != null)
                             {
-                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.IFrame, ControlCode.RR, fromUser);
+                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), Frames.IFrame, Frames.Commands.RR, fromUser);
                                 serverConnection.send(toSend);
                                 fromUser = null;
                             }
                             //Nothing to send
                             else
                             {
-                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), Type.SFrame, ControlCode.RR); 
+                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), Frames.SFrame, Frames.Commands.RR); 
                                serverConnection.send(toSend); 
                             }
                         }
