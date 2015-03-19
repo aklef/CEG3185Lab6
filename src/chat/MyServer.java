@@ -1,6 +1,6 @@
 package chat;
 
-import chat.NetFrame.Frames;
+import chat.NetFrame.HDLCFrame;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ServerSocket;
@@ -66,7 +66,7 @@ public class MyServer
         for (Connection connection : clientConnections)
         {
             String message = "";
-            NetFrame rrxp_read = null, rrxp = new NetFrame(connection.getAddress(), Frames.SFrame, Frames.Commands.RR);
+            NetFrame rrxp_read = null, rrxp = new NetFrame(connection.getAddress(), HDLCFrame.SFrame, HDLCFrame.Commands.RR);
             rrxp.setPollFinal(true);
             
             try
@@ -84,14 +84,14 @@ public class MyServer
 				return;
 			}
 
-            if (rrxp_read.getFrameType() == Frames.SFrame &&
-            		rrxp_read.getCC() == Frames.Commands.RR)
+            if (rrxp_read.getFrameType() == HDLCFrame.SFrame &&
+            		rrxp_read.getCC() == HDLCFrame.Commands.RR)
             {
                 //Received RR frame
                 System.out.println("Station " + connection.getAddress() + " is ready to receive");
             }
-            else if (rrxp_read.getFrameType() == Frames.IFrame &&
-            			rrxp_read.getCC() == Frames.Commands.RR)
+            else if (rrxp_read.getFrameType() == HDLCFrame.IFrame &&
+            			rrxp_read.getCC() == HDLCFrame.Commands.RR)
             {                
                 //Right branch
                 InetAddress destination = rrxp_read.getDestinationAddress();
@@ -125,13 +125,13 @@ public class MyServer
     public static void handShake(Connection connection) throws Exception
     {
         // Set normal response mode
-    	NetFrame snrm = new NetFrame(connection.getAddress(), Frames.UFrame, Frames.Commands.SNRM);
+    	NetFrame snrm = new NetFrame(connection.getAddress(), HDLCFrame.UFrame, HDLCFrame.Commands.SNRM);
         connection.send(snrm);
 
         String message = connection.read();
         NetFrame ua = new NetFrame(message);
 
-        if (ua.getFrameType() != Frames.UFrame || ua.getCC() != Frames.Commands.UA)
+        if (ua.getFrameType() != HDLCFrame.UFrame || ua.getCC() != HDLCFrame.Commands.UA)
         {
             System.err.println("ERROR : Did not receive UA frame from " + connection.getAddress());
         }
@@ -209,7 +209,7 @@ public class MyServer
 		}
 	}
 
-//			NetFrame pollFrame = new NetFrame(connection.socket.getInetAddress().toString(),Frames.IFrame, NetFrame.ControlCode.RNR);
+//			NetFrame pollFrame = new NetFrame(connection.socket.getInetAddress().toString(),HDLCFrame.IFrame, NetFrame.ControlCode.RNR);
 //			connection.enqueue(pollFrame.toString());
 //			
 //			String pollResult = connection.read();

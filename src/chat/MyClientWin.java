@@ -181,12 +181,12 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
                 System.out.println(received);
                 
                 NetFrame snrm = new NetFrame(received);
-                if (snrm.getFrameType() != Frames.UFrame || snrm.getCC() != Frames.Commands.SNRM)
+                if (snrm.getFrameType() != HDLCFrame.UFrame || snrm.getCC() != HDLCFrame.Commands.SNRM)
                 {
                     System.out.println("ERROR : Did not receive SNRM frame from " + serverConnection.getAddress());
                 }
                 
-                NetFrame ua = new NetFrame(serverConnection.getAddress(), Frames.UFrame, Frames.Commands.UA);
+                NetFrame ua = new NetFrame(serverConnection.getAddress(), HDLCFrame.UFrame, HDLCFrame.Commands.UA);
                 try
                 {
                     serverConnection.send(ua);
@@ -340,19 +340,19 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 						break;
 						
 					case SFrame: case UFrame:
-                        if (receivedFrame.getCC() == Frames.Commands.RR)
+                        if (receivedFrame.getCC() == HDLCFrame.Commands.RR)
                         {
                             //Something to send
                             if (fromUser != null)
                             {
-                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), Frames.IFrame, Frames.Commands.RR, fromUser);
+                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), HDLCFrame.IFrame, HDLCFrame.Commands.RR, fromUser);
                                 serverConnection.send(toSend);
                                 fromUser = null;
                             }
                             //Nothing to send
                             else
                             {
-                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), Frames.SFrame, Frames.Commands.RR); 
+                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), HDLCFrame.SFrame, HDLCFrame.Commands.RR); 
                                serverConnection.send(toSend); 
                             }
                         }

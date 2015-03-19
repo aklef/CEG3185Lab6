@@ -11,7 +11,7 @@ import com.google.common.collect.HashBiMap;
 
 /**
  * Represents a single link-layer HDLC frame.
- * Each {@code NetFrame} has a designated {@code Frames} value.
+ * Each {@code NetFrame} has a designated {@code HDLCFrame} value.
  * 
  * @author Andréas K.LeF.
  * @author David Alleyn
@@ -27,7 +27,7 @@ public class NetFrame
 	/**
 	 * The HDLC frame types.
 	 */
-	public static enum Frames {
+	public static enum HDLCFrame {
 		/**
 		 * Information frame. Contains data that needs to be extracted.
 		 * Will contain {@code NetFrame} sequence numbers
@@ -79,39 +79,39 @@ public class NetFrame
 	}
 		
 	/**
-	 * Placeholder {@code String}s for each {@code NetFrame} {@code Frames}'s {@code ControlCode}.
+	 * Placeholder {@code String}s for each {@code NetFrame} {@code HDLCFrame}'s {@code ControlCode}.
 	 */
-	private static BiMap<Frames, String> FC;
+	private static BiMap<HDLCFrame, String> FC;
 	static
     {
 		FC = HashBiMap.create();
-		FC.put(Frames.IFrame, "0NSPNR00");
-		FC.put(Frames.SFrame, "10CCPNR0");
-		FC.put(Frames.UFrame, "11CCPBBB");
+		FC.put(HDLCFrame.IFrame, "0NSPNR00");
+		FC.put(HDLCFrame.SFrame, "10CCPNR0");
+		FC.put(HDLCFrame.UFrame, "11CCPBBB");
     }
         
-	private static BiMap<Frames.Commands, String> CC;
+	private static BiMap<HDLCFrame.Commands, String> CC;
 	
     static
     {
 		CC = HashBiMap.create();
-		CC.put(Frames.Commands.RR,   "00XXX");
-		CC.put(Frames.Commands.RNR,  "01XXX");
-		CC.put(Frames.Commands.REJ,  "10XXX");
-		CC.put(Frames.Commands.SREJ, "11XXX");
+		CC.put(HDLCFrame.Commands.RR,   "00XXX");
+		CC.put(HDLCFrame.Commands.RNR,  "01XXX");
+		CC.put(HDLCFrame.Commands.REJ,  "10XXX");
+		CC.put(HDLCFrame.Commands.SREJ, "11XXX");
 		
-		CC.put(Frames.Commands.SNRM,  "00001");
-		CC.put(Frames.Commands.SNRME, "11011");
-		CC.put(Frames.Commands.SIM,   "11000");
-		CC.put(Frames.Commands.DISC,  "00010");
-//		CC.put(Frames.Commands.RD,    "00010");
-		CC.put(Frames.Commands.UA,    "00110");
-		CC.put(Frames.Commands.RIM,   "10000");
-		CC.put(Frames.Commands.UI,    "00000");
-		CC.put(Frames.Commands.UP,    "00100");
-		CC.put(Frames.Commands.RSET,  "11001");
-		CC.put(Frames.Commands.XID,   "11101");
-		CC.put(Frames.Commands.FRMR,  "10001");
+		CC.put(HDLCFrame.Commands.SNRM,  "00001");
+		CC.put(HDLCFrame.Commands.SNRME, "11011");
+		CC.put(HDLCFrame.Commands.SIM,   "11000");
+		CC.put(HDLCFrame.Commands.DISC,  "00010");
+//		CC.put(HDLCFrame.Commands.RD,    "00010");
+		CC.put(HDLCFrame.Commands.UA,    "00110");
+		CC.put(HDLCFrame.Commands.RIM,   "10000");
+		CC.put(HDLCFrame.Commands.UI,    "00000");
+		CC.put(HDLCFrame.Commands.UP,    "00100");
+		CC.put(HDLCFrame.Commands.RSET,  "11001");
+		CC.put(HDLCFrame.Commands.XID,   "11101");
+		CC.put(HDLCFrame.Commands.FRMR,  "10001");
     }
 	
 	InetAddress addr;
@@ -126,11 +126,11 @@ public class NetFrame
 	/**
 	 * The {@code ControlCode} this frame is carrying.
 	 */
-	protected Frames.Commands cc;
+	protected HDLCFrame.Commands cc;
 	/**
-	 * This {@code NetFrame}'s {@code Frames}.
+	 * This {@code NetFrame}'s {@code HDLCFrame}.
 	 */
-	protected Frames type;
+	protected HDLCFrame type;
 	
 	/**
 	 * Parses a binary string to create a {@code NetFrame}
@@ -150,7 +150,7 @@ public class NetFrame
 	/**
 	 * Used to create an {@code SFrame} from parameters.
 	 */
-	public NetFrame (InetAddress destAddr, Frames type, Frames.Commands Code)
+	public NetFrame (InetAddress destAddr, HDLCFrame type, HDLCFrame.Commands Code)
 	{
 		this(destAddr, type, Code, "");
 	}
@@ -164,7 +164,7 @@ public class NetFrame
 	 * @param info client data.
 	 * @throws UnknownHostException 
 	 */
-	public NetFrame (InetAddress destAddr, Frames type, Frames.Commands code, String info)
+	public NetFrame (InetAddress destAddr, HDLCFrame type, HDLCFrame.Commands code, String info)
 	{
 		this.addr = destAddr;
                 this.setInfo(info);
@@ -172,13 +172,13 @@ public class NetFrame
 	}
 	
 	/**
-	 * Sets this {@code NetFrame}'s {@code Frames} and {@code ControlCode}
+	 * Sets this {@code NetFrame}'s {@code HDLCFrame} and {@code ControlCode}
 	 * by replacing placeolder values in {@code FC}.
 	 * 
-	 * @param type this {@code NetFrame}'s {@code Frames} enum value
+	 * @param type this {@code NetFrame}'s {@code HDLCFrame} enum value
 	 * @param code the {@code ControlCode} of this {@code NetFrame}
 	 */
-	private void setType (Frames type, Frames.Commands code)
+	private void setType (HDLCFrame type, HDLCFrame.Commands code)
 	{
 		this.type = type;
 		this.cc = code;
@@ -281,15 +281,15 @@ public class NetFrame
 		                
 		if (fc.charAt(0) == '0')
 		{
-			this.type = NetFrame.Frames.IFrame;
+			this.type = NetFrame.HDLCFrame.IFrame;
 		}
 		else if (fc.charAt(1) == '0')
 		{
-			this.type = NetFrame.Frames.SFrame;
+			this.type = NetFrame.HDLCFrame.SFrame;
 		}
 		else if (fc.charAt(1) == '1')
 		{
-			this.type = NetFrame.Frames.UFrame;
+			this.type = NetFrame.HDLCFrame.UFrame;
 		}
 		
 		switch (this.type)
@@ -318,7 +318,7 @@ public class NetFrame
 		return this.info;
 	}
 	
-	Frames getFrameType()
+	HDLCFrame getFrameType()
 	{
 		return type;
 	}
@@ -328,7 +328,7 @@ public class NetFrame
 	 * 
 	 * @return
 	 */
-	Frames.Commands getCC()
+	HDLCFrame.Commands getCC()
 	{
 		return this.cc;
 	}
