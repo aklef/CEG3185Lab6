@@ -1,13 +1,12 @@
 package chat;
+
+import chat.NetFrame.Type;
 import chat.NetFrame.ControlCode;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.ServerSocket;
 import java.util.LinkedList;
-
-import chat.NetFrame.Type;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 
 public class MyServer
 {
@@ -15,7 +14,7 @@ public class MyServer
 	 * The TCP port this server will listen on for incoming connections.
 	 */
 	public static final int LISTEN_PORT = 4444;
-	public static final int SERVER_SOCKET_TIMEOUT = 1000;
+	public static final int SERVER_SOCKET_TIMEOUT = 15000;
 	
 	/**
 	 * Send each connected client's queued messages to all other clients.
@@ -25,15 +24,24 @@ public class MyServer
 	 * 
 	 * @param clients List of {@code ClientConnection}s to message.
 	 */
-	public static void sendMessages(LinkedList<Connection> clients) throws UnknownHostException, InterruptedException
+	public static void sendMessages(LinkedList<Connection> clientConnections)
 	{
-		for (Connection currentClient : clients)
+		for (Connection connection : clientConnections)
 		{
-			LinkedList<String> currentClientMessages = currentClient.getMessages();
+			LinkedList<String> clientMessages = connection.getMessages();
 			
-			for (String message : currentClientMessages)
+			try
 			{
-				currentClient.send(new NetFrame(message));
+				for (String message : clientMessages)
+				{
+					connection.send(new NetFrame(message));
+				}
+				
+			}
+			catch (Exception e)
+			{
+				connection.close();
+				clientConnections.remove(connection);
 			}
 		}
 	}
@@ -53,26 +61,38 @@ public class MyServer
 	 * @param clientConnections List each <code>ClientConnection<code> to poll.
 	 * @throws IOException Error reading from client connection.
 	 */
-	public static void pollStations(LinkedList<Connection> clientConnections) throws IOException, InterruptedException
+	public static void pollStations(LinkedList<Connection> clientConnections)
 	{
 		
         for (Connection connection : clientConnections)
         {
-        	
-            NetFrame rrxp = new NetFrame(connection.getAddress(), Type.SFrame, ControlCode.RR);
+            String message = "";
+            NetFrame rrxp_read = null, rrxp = new NetFrame(connection.getAddress(), Type.SFrame, ControlCode.RR);
             rrxp.setPollFinal(true);
-            connection.send(rrxp);
             
-                                
-            String message = connection.read();
-            NetFrame rrxp_read = new NetFrame(message);
+            try
+			{
+                message = connection.read();
+                rrxp_read = new NetFrame(message);
+				connection.send(rrxp);
+				
+			}
+			catch (Exception e)
+			{
+				connection.close();
+				clientConnections.remove(connection);
+				
+				return;
+			}
 
-            if (rrxp_read.getFrameType() == Type.SFrame && rrxp_read.getCC() == ControlCode.RR)
+            if (rrxp_read.getFrameType() == Type.SFrame &&
+            		rrxp_read.getCC() == ControlCode.RR)
             {
                 //Received RR frame
                 System.out.println("Station " + connection.getAddress() + " is ready to receive");
             }
-            else if (rrxp_read.getFrameType() == Type.IFrame && rrxp_read.getCC() == ControlCode.RR)
+            else if (rrxp_read.getFrameType() == Type.IFrame &&
+            			rrxp_read.getCC() == ControlCode.RR)
             {                
                 //Right branch
                 InetAddress destination = rrxp_read.getDestinationAddress();
@@ -96,26 +116,32 @@ public class MyServer
             }
         }
 	}
-        
-    public static void handShake(Connection connection) throws IOException, InterruptedException
+    
+	/**
+	 * Initiates an HDLC handshake.
+	 * @param connection wuth which to do the handshake
+	 * @throws IOException
+	 * @throws InterruptedException
+	 */
+    public static void handShake(Connection connection) throws Exception
     {
-        {
-            NetFrame snrm = new NetFrame(connection.getAddress(), Type.UFrame, ControlCode.SNRM);
-            connection.send(snrm);
-        }
-        {
-            String message = connection.read();
-            NetFrame ua = new NetFrame(message);
+        // Set normal response mode
+    	NetFrame snrm = new NetFrame(connection.getAddress(), Type.UFrame, ControlCode.SNRM);
+        connection.send(snrm);
 
-            if (ua.getFrameType() != Type.UFrame || ua.getCC() != ControlCode.UA)
-            {
-                System.out.println("ERROR : Did not receive UA frame from " + connection.getAddress());
-            }
-        }    
+        String message = connection.read();
+        NetFrame ua = new NetFrame(message);
+
+        if (ua.getFrameType() != Type.UFrame || ua.getCC() != ControlCode.UA)
+        {
+            System.err.println("ERROR : Did not receive UA frame from " + connection.getAddress());
+        }
     }
 	
-	public static void main(String[] args) throws IOException, UnknownHostException, InterruptedException
+	public static void main(String[] args)
 	{
+        System.out.println("Server initializing...");
+        
 		ServerSocket serverSocket = null;
 		LinkedList<Connection> clientConnections = new LinkedList<Connection>();
 			
@@ -125,47 +151,62 @@ public class MyServer
 		}
 		catch (IOException e)
 		{
-			System.err.println("Could not listen on port: " + args[0]);
+			System.err.println("FATAL: could not listen on port: " + args[0]);
 			System.exit(-1);
 		}
 		
-		serverSocket.setSoTimeout(SERVER_SOCKET_TIMEOUT);
-                
-        boolean connected = false;
+		//serverSocket.setSoTimeout(SERVER_SOCKET_TIMEOUT);
+        boolean clientsConnected = false;
+        
+		System.out.println("Initialized. Waiting for clients...");
         
         //During the simulation, 2 clients must be connected. Allow them to connect before simulation
         while (true)
         {
+        	Connection con = null;
             try
             {
-                //System.err.println("Waiting for " +  (2 - clientConnections.size()) + " more clients to connect for simulation.");
-                clientConnections.add(new Connection(serverSocket.accept()));
-                
-                handShake(clientConnections.getLast());
-                connected = true;
+                con = new Connection(
+            		// server thread waits here until a connection is made
+            		serverSocket.accept());
+
+                handShake(con);
+                clientConnections.addLast(con);
+                clientsConnected = true;
+                System.out.println("Client added " + con.getAddress());
             }
             catch (InterruptedIOException e) 
             {
-            	//Timeout, process queued messages
-            	
-            	
-            }	
+            	// Timeout, process queued messages
+            	pollStations(clientConnections);
+                sendMessages(clientConnections);
+                
+            }
+			catch (Exception e)
+			{
+				// Cient did not connect properly
+				System.out.println("Could not add client...");
+				e.printStackTrace();
+				con = null;
+			}	
             
-            pollStations(clientConnections);
-            sendMessages(clientConnections);
-
-            if (clientConnections.size() == 0 && connected)
+            if (clientConnections.size() == 0 && clientsConnected)
             {
                 break;
             }
         }
-		
-		// We have escaped the listen loop; close the server.
-		serverSocket.close();
-		
-		for (Connection clientConnection : clientConnections)
+        
+		try
 		{
-			clientConnection.close();
+			for (Connection clientConnection : clientConnections)
+			{
+				clientConnection.close();
+			}
+			serverSocket.close();
+		}
+		catch (IOException e)
+		{
+			System.out.println(e);
 		}
 	}
 

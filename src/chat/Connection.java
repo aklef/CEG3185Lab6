@@ -10,6 +10,8 @@ import java.net.Socket;
 import java.util.LinkedList;
 
 /**
+ * 
+ * 
  * @author Andréas K.LeF.
  * @author David Alleyn
  * @author Kent Hagerman
@@ -40,17 +42,17 @@ class Connection
 		
 		socketWriter = new PrintWriter(socket.getOutputStream(), true);
 		socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		messageQueue = new LinkedList<String>();
 		
-		System.out.println("Connection from " + socket.getInetAddress() + " accepted");
 		//socket.setSoTimeout(SOCKET_TIMEOUT);
         
-		messageQueue = new LinkedList<String>();
+		System.out.println("Accepted connection from " + socket.getInetAddress());
 	}
 	
 	/**
-	 * Write a message to this socket.
+	 * Write to this socket.
 	 * 
-	 * @param message To be writtent to the socket.
+	 * @param message to be written to the socket.
 	 * @throws InterruptedException In case of network write failure. Network probably down.
 	 */
 	void send(NetFrame message) throws InterruptedException
@@ -104,12 +106,9 @@ class Connection
 	{
 		try
 		{
-			socket.close();
+			this.socket.close();
 		}
-		catch (Exception e)
-		{
-			System.out.println(e);
-		}
+		catch (IOException e){}
 	}
 
 	protected void enqeue(String message)

@@ -18,7 +18,7 @@ public class Window
 	protected int L = 0, R = 8, M = 0;
 	
 	/**
-	 * Construct a Window consisting of an empty {@code LinkedList<Frame>} of HDLC frames of length {@code MAX_WINDOW_LENGTH}.
+	 * Constructor for the sliding Window. Consists of an empty {@code LinkedList<Frame>} of HDLC frames of length {@code MAX_WINDOW_LENGTH}.
 	 */
 	Window (Connection connect)
 	{
@@ -63,9 +63,9 @@ public class Window
                 L++;
                 R++;
                 
-                if (L >= MAX_WINDOW_LENGTH)
+                if (L == MAX_WINDOW_LENGTH)
                     L = 0;
-                if (R >= MAX_WINDOW_LENGTH)
+                if (R == MAX_WINDOW_LENGTH)
                     R = 0;
             }
             catch (IOException ex)

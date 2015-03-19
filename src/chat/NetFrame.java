@@ -42,8 +42,41 @@ public class NetFrame
 		 * Unnumbered frame for link management. 
 		 * Might be unused in this context.
 		 */
-		UFrame
-		};
+		UFrame;
+		
+		enum Command
+		{
+			// (S)upervisory-frame commands
+			/**
+			 * Receive Ready
+			 */
+			RR,
+			/**
+			 * Receive Not Ready
+			 */
+			RNR,
+			/**
+			 * Reject 
+			 */
+			REJ,
+			/**
+			 * Selective Reject
+			 */
+			SREJ,
+			
+			// (U)nnumbered-frame commands 
+			/**
+			 * Set normal response mode
+			 */
+			SNRM,
+			SNRME, SIM,
+			/**
+			 * Disconnect
+			 */
+			DISC,
+			UA, RD, RIM, UI, UP, RSET, XID, FRMR;
+		}
+	}
 		
 	/**
 	 * Placeholder {@code String}s for each {@code NetFrame} {@code Type}'s {@code ControlCode}.
@@ -56,10 +89,18 @@ public class NetFrame
 		FC.put(Type.SFrame, "10CCPNR0");
 		FC.put(Type.UFrame, "11CCPBBB");
     }
+	
 	public static enum ControlCode
 	{
 		RR, RNR, REJ, SREJ, 
-		SNRM, SNRME, SIM, DISC, UA, RD, RIM, UI, UP, RSET, XID, FRMR;
+		/**
+		 * Set normal response mode
+		 */
+		SNRM, 
+		/**
+		 * Set normal response extended mode 
+		 */
+		SNRME, SIM, DISC, UA, RD, RIM, UI, UP, RSET, XID, FRMR;
 	}
         
 	private static BiMap<ControlCode, String> CC;
