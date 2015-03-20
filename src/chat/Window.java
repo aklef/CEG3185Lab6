@@ -1,51 +1,71 @@
 package chat;
 
 import chat.NetFrame;
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import chat.NetFrame.HDLCFrameTypes;
 
-public class Window
+import java.io.IOException;
+
+class Window
 {
-	private static final int MAX_WINDOW_LENGTH = 7;
+	private static final int MAX_WINDOW_LENGTH = 8;
+	private int NUMBER_SEND_SEQUENCE, NUMBER_RECEIVE_SEQUENCE;
+	private HDLCFrameTypes previousFrameType;
 	
-    NetFrame[] messageQueue;
-    Connection connection;
+    private NetFrame[] slidingWindow;
+    private Connection connection;
         
 	/**
-	 * {@code NetFrame} index for sliding window.
+	 * {@code NetFrame} index for sliding slidingWindow. Left, Right and Middle(?)
 	 */
-	protected int L = 0, R = 8, M = 0;
+	private int L = 0, R = 8, M = 0;
 	
 	/**
 	 * Constructor for the sliding Window. Consists of an empty {@code LinkedList<Frame>} of HDLC frames of length {@code MAX_WINDOW_LENGTH}.
 	 */
-	Window (Connection connect)
+	public Window (Connection connect)
 	{
-        connection = connect;
-		messageQueue = new NetFrame[MAX_WINDOW_LENGTH];
+        this.connection = connect;
+		this.slidingWindow = new NetFrame[MAX_WINDOW_LENGTH];
+		NUMBER_SEND_SEQUENCE = 0;
+		NUMBER_RECEIVE_SEQUENCE = 0;
 	}
 	
-	public boolean add(NetFrame newFrame) throws InterruptedException
+	public boolean add(NetFrame frame)
+			//throws InterruptedException
 	{
-		System.out.print("\n");
-		
-        //Wait for window to catch up before sending message
-        while (M == R)
+		if (previousFrameType == HDLCFrameTypes.IFrame && frame.getFrameType() != HDLCFrameTypes.IFrame)
         {
-            System.out.print("Wait for window to slide...");
-            Thread.sleep(1000);
+			// No longer sending I-Frames. Reset.
+			NUMBER_SEND_SEQUENCE = 0;
+        }
+		else if (previousFrameType == HDLCFrameTypes.IFrame && frame.getFrameType() == HDLCFrameTypes.IFrame)
+        {
+			NUMBER_SEND_SEQUENCE = (NUMBER_SEND_SEQUENCE + 1) % 8;
+        	frame.setNSS(NUMBER_SEND_SEQUENCE);
+        }
+		
+		if (frame.getFrameType() == HDLCFrameTypes.IFrame || frame.getFrameType() == HDLCFrameTypes.SFrame)
+        {
+			if (frame.getFrameType() == HDLCFrameTypes.IFrame)
+	        	frame.setNSS(NUMBER_SEND_SEQUENCE);
+	        	
+			frame.setNRS(NUMBER_RECEIVE_SEQUENCE);
         }
         
-        messageQueue[M++] = newFrame;
+		//Wait for slidingWindow to catch up before sending message
+//        while (M == R)
+//        {
+//            System.out.print("Sliding..");
+//            Thread.sleep(500);
+//        }
+
+        previousFrameType = frame.getFrameType();
+        slidingWindow[M] = frame;
+        M = (M+1) % MAX_WINDOW_LENGTH; // increment for next frame
         
-        if (M >= MAX_WINDOW_LENGTH)
-            M = 0;
-        
-        run();
         return true;
 	}
-
+	
 	/**
 	 * 
 	 */
@@ -56,21 +76,17 @@ public class Window
             try
             {
 //                System.out.println("Sending");
-                connection.sendSRS(messageQueue[L]);
+                connection.sendSRS(slidingWindow[L]);
 //                System.out.println("Acking");
                 connection.waitForAck();
 //                System.out.println("Acked");
-                L++;
-                R++;
                 
-                if (L == MAX_WINDOW_LENGTH)
-                    L = 0;
-                if (R == MAX_WINDOW_LENGTH)
-                    R = 0;
+                this.L = (++L) % MAX_WINDOW_LENGTH;
+                this.R = (++R) % MAX_WINDOW_LENGTH;
             }
             catch (IOException ex)
             {
-                Logger.getLogger(Window.class.getName()).log(Level.SEVERE, null, ex);
+            	//ex.printStackTrace();
             } 
         }
     }

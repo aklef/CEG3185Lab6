@@ -3,14 +3,14 @@ package chat;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.io.InterruptedIOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.LinkedList;
 
 /**
- * 
+ * Represents
  * 
  * @author Andréas K.LeF.
  * @author David Alleyn
@@ -19,85 +19,92 @@ import java.util.LinkedList;
  */
 class Connection
 {
-	protected static final int SOCKET_TIMEOUT = 2000;
-	protected LinkedList<String> messageQueue;
-	Socket socket;
-	PrintWriter socketWriter;
-	
    /**
-    * La fenetre coulissante 
-    * 
+    * The virtual 'sliding window'
     */
-	Window framesWindow;
-	BufferedReader socketReader;
-        
+	private Window slidingWindow;
+	private LinkedList<String> messageQueue;
+	private Socket socket;
+	private BufferedReader socketReader;
+	private PrintWriter socketWriter;
+      
     /**
-     * Opens a connection to a given socket
+     * Create a one-time use connection for server clients.
      * 
      * @param socket The socket to open this connection on.
      */
 	public Connection(Socket socket) throws IOException
 	{
 		this.socket = socket;
-		
-		socketWriter = new PrintWriter(socket.getOutputStream(), true);
-		socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-		messageQueue = new LinkedList<String>();
-		
-		//socket.setSoTimeout(SOCKET_TIMEOUT);
-        
-		System.out.println("Accepted connection from " + socket.getInetAddress());
+		this.slidingWindow = new Window(this);
+		this.socketWriter = new PrintWriter(socket.getOutputStream(), true);
+		this.socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+		this.messageQueue = new LinkedList<String>();
 	}
 	
 	/**
-	 * Write to this socket.
+     * Create a one-time use connection.
+     * 
+     * @param socket The socket to open this connection on.
+	 */
+	public Connection(InetAddress serverAddress, int serverPort) throws IOException
+	{
+		this(new Socket(serverAddress, serverPort));
+	}
+
+	/**
+	 * Send a single frame through this connection.
 	 * 
-	 * @param message to be written to the socket.
+	 * @param frame to be sent throught this connection.
+	 */
+	void send(NetFrame frame)
+	{
+		slidingWindow.add(frame);
+		slidingWindow.run();
+	}
+	
+	/**
+	 * Send frames throught this connection.
+	 * 
+	 * @param frames to be sent through this connection.
 	 * @throws InterruptedException In case of network write failure. Network probably down.
 	 */
-	void send(NetFrame message) throws InterruptedException
+	void send(NetFrame[] frames) throws InterruptedException
 	{
-        if (framesWindow == null)
-        {
-            framesWindow = new Window(this);
-        }
-    
-        //socketWriter.println(message);
-            
-		framesWindow.add(message);
+        for (NetFrame frame : frames)
+		{
+    		slidingWindow.add(frame);
+		}
+        
+		slidingWindow.run();
 	}
         
-    void sendSRS(NetFrame message)
+    protected void sendSRS(NetFrame message)
     {
         socketWriter.println(message);
     }
     
-    void waitForAck() throws IOException
+    protected void waitForAck() throws IOException
     {
-        socketReader.readLine();
+        // something should arrive unblocking this, signlaing an ACK.
+    	// i.e wait for that YOLOACK
+    	socketReader.readLine();
     }
         
-    InetAddress getAddress()
+    public InetAddress getAddress()
     {
         return socket.getInetAddress();
     }
 	
-	String read() throws IOException
+    /**
+     * Check this connection for incoming messages
+     * @return incoming message.
+     */
+	protected String read() throws IOException, SocketException
 	{
-		String result = null;
-		try
-		{      
-			result = socketReader.readLine();
-            socketWriter.println("YOLOACK");            
-		}
-		catch (InterruptedIOException e)
-		{
-			result = null;
-		}
-		catch (java.net.SocketException e) 
-		{
-			result = null;
-		}
+		String result = socketReader.readLine();
+//		System.out.println(socket + " says:\n"+ result);
+        socketWriter.println("YOLOACK"); // Write anything to acknowledge mesage receipt..
 		
 		return result;
 	}
@@ -106,6 +113,7 @@ class Connection
 	{
 		try
 		{
+			
 			this.socket.close();
 		}
 		catch (IOException e){}
@@ -120,9 +128,19 @@ class Connection
 	 * Retourne les message et les claires
 	 * @return List of messages.
 	 */
-	protected LinkedList<String> getMessages() {
+	protected LinkedList<String> getMessages()
+	{
 		LinkedList<String> temp = messageQueue;
 		messageQueue = new LinkedList<String>();
 		return temp;
+	}
+	
+	/**
+	 * Returns a {@code String} representation of this {@code Connection}.
+	 */
+	@Override
+	public String toString()
+	{
+		return socket.toString();
 	}
 }

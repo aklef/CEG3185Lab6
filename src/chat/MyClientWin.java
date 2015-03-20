@@ -20,10 +20,9 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import java.io.IOException;
-import java.net.Socket;
+import java.net.InetAddress;
+import java.net.SocketException;
 import java.net.UnknownHostException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import com.google.common.net.InetAddresses;
 
@@ -31,11 +30,10 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 {
 	private static final long serialVersionUID = 1702635793607554428L;
 	
-	private String
-			clientId, serverIP,
-			fromServer, fromUser,
-			connectionStatus	  = "Not Connected to Chat Server!";
-	private int serverPort = 4444;
+	private String clientId, fromServer, userData, connectionStatus;
+	private static final String STATUS_OK = "Connected to a Chat Server!";
+	private static final String STATUS_KO = "Not connected to a Chat Server!";
+	
 	private boolean isConnected = false;
 	/**
 	 * User input field
@@ -46,10 +44,14 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	 */
 	private TextArea textArea;
 	private JButton connectButton, msgButton;
+	private Font fontb;
 	private static Frame frame;
 	
-	Thread thread;
-	private Connection serverConnection;
+	private Thread listeningThread;
+	private InetAddress serverAddress;
+	private int serverPort;
+	private static final int DEFAULT_SERVER_PORT = 4444;
+	private Connection server;
 	
 	/************************************************************************/
 	
@@ -59,11 +61,14 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 		textField = new TextField("", 50);
 		textArea = new TextArea("No Messages", 15, 50);
 		textArea.setEditable(false);
+		textArea.setEnabled(false);
 		connectButton = new JButton("Connect");
+		connectionStatus = STATUS_KO;
 		msgButton = new JButton("Send Message");
 		msgButton.setEnabled(false);
 		JButton closeButton = new JButton("Close");
-		// Button chkmsgbutton = new Button("Check Messages");
+		
+		fontb = new Font("Arial", Font.BOLD, 14);
 		
 		textField.addKeyListener(this);
 		connectButton.addActionListener(this);
@@ -77,7 +82,6 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 		add(connectButton);
 		add(closeButton);
 		add(msgButton);
-		// add(chkmsgbutton);
 		add(textArea);
 		
 		try
@@ -91,28 +95,15 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	@Override
 	public void paint(Graphics g)
 	{
-		
-		Font fontb = new Font("Arial", Font.BOLD, 14);
+		super.paintComponents(g);
 		
 		if (isConnected)
-		{
 			g.setColor(Color.GREEN);
-		}
 		else
-		{
 			g.setColor(Color.RED);
-		}
 		
 		g.setFont(fontb);
-		g.drawString(connectionStatus, 60, 330);
-		
-		/*
-		 * try { fromServer = in.readLine(); }catch (InterruptedIOException e) {
-		 * } if (fromServer) != null) { textArea.setText(textArea.getText()+
-		 * "\n" + fromServer); }
-		 */		
-		
-		super.paint(g);
+		g.drawString(connectionStatus, 80, 330);
 	}
 	
 	/**
@@ -127,101 +118,23 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 		{
 			if(isConnected)
 			{
-				serverConnection.close();
+				this.server.close();
 			}
-			
 			System.exit(0);
 		}
-		
 		// ******************************************
-		// connect button pressed
+		// Connect button pressed
 		// ******************************************
-		else if (arg == "Connect" && !isConnected)
+		else if (arg == "Connect")
 		{
-			try
-			{
-				// get server IP and name of client	
-				try
-				{
-					InetAddresses.forString(textField.getText());
-				}
-				catch (IllegalArgumentException e)
-				{
-					serverIP = JOptionPane.showInputDialog("Enter Chat server IP:", "127.0.0.1");
-				}
-				
-				clientId = JOptionPane.showInputDialog("Enter your name:", "Anonymous");
-				
-				try
-				{
-					serverPort = Integer.parseInt(JOptionPane
-							.showInputDialog("Enter port number:", 4444));
-				}
-				catch (NumberFormatException e)
-				{
-					serverPort = 4444;
-				}
-				
-				serverConnection = new Connection(new Socket(serverIP, serverPort));
-				
-                System.out.println("Connected");
-                isConnected = true;
-                msgButton.setEnabled(true);
-                connectButton.setEnabled(false);
-                connectionStatus = "Connected to the chat server!";
-                
-                repaint();
-                
-				// optional - setting socket timeout to 5 secs
-				// this is not necessary because application
-				// runs with multiple threads
-				// mySocket.setSoTimeout(5000);
-				
-				String received = serverConnection.read();
-                System.out.println(received);
-                
-                NetFrame snrm = new NetFrame(received);
-                if (snrm.getFrameType() != HDLCFrame.UFrame || snrm.getCC() != HDLCFrame.Commands.SNRM)
-                {
-                    System.out.println("ERROR : Did not receive SNRM frame from " + serverConnection.getAddress());
-                }
-                
-                NetFrame ua = new NetFrame(serverConnection.getAddress(), HDLCFrame.UFrame, HDLCFrame.Commands.UA);
-                try
-                {
-                    serverConnection.send(ua);
-                }
-                catch (InterruptedException ex)
-                {
-                    Logger.getLogger(MyClientWin.class.getName()).log(Level.SEVERE, null, ex);
-                }
-                
-				//
-				// define new thread
-				//
-				thread = new Thread(this);
-				thread.start();
-			}
-			catch (UnknownHostException e)
-			{
-				isConnected = false;
-				connectionStatus = "Not Connected to the chat server!";
-				JOptionPane.showMessageDialog(null, "Don't know about host: " + serverIP);
-			}
-			catch (IOException e)
-			{
-				isConnected = false;
-				connectionStatus = "Not Connected to the chat server!";
-				JOptionPane.showMessageDialog(null, "Server is not running!");
-			}
+			connect();
 		}
-		
 		// ******************************************
 		// Send Message button pressed
 		// ******************************************
 		else if (arg == "Send Message")
 		{
-			if (textField.getText() != null)
+			if (!textField.getText().isEmpty())
 			{
 				//
 				// copy content of the message text into
@@ -229,17 +142,96 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 				// only one message can be stored into the
 				// buffer
 				//
-				fromUser = clientId + ": " + textField.getText();
+				userData = clientId + ": " + textField.getText();
 				textField.setText("");
 			}
 			else
 			{
-				fromUser = null;
+				userData = "";
 			}
-			
 		}
 		repaint();
 	}
+	
+	/**
+	 * Called when the connect button is pressed.
+	 */
+	private void connect()
+    {
+		try
+		{
+			// get server IP and name of client	
+			if (InetAddresses.isInetAddress(textField.getText()))
+			{
+				serverAddress = InetAddresses.forString(textField.getText());
+			}
+			else
+			{
+				textField.setText("");
+				serverAddress = InetAddress.getByName(JOptionPane.showInputDialog("Enter Chat server IP:", "127.0.0.1"));
+			}
+			
+			clientId = JOptionPane.showInputDialog("Enter your name:", "Anonymous");
+			
+			try
+			{
+				serverPort = Integer.parseInt(JOptionPane
+						.showInputDialog("Enter port number:", 4444));
+			}
+			catch (NumberFormatException e)
+			{
+				serverPort = DEFAULT_SERVER_PORT;
+			}
+			
+			server = new Connection(serverAddress, serverPort);
+            isConnected = true;
+            msgButton.setEnabled(true);
+    		msgButton.requestFocusInWindow();
+            connectButton.setEnabled(false);
+            textArea.setText("");
+            textArea.setEnabled(true);
+            connectionStatus = STATUS_OK;
+            
+            repaint();
+            
+			// optional - setting socket timeout to 5 secs
+			// this is not necessary because application
+			// runs with multiple threads
+			// mySocket.setSoTimeout(5000);
+			
+			String received = server.read();
+            NetFrame snrm = new NetFrame(received);
+            if (snrm.getFrameType() != HDLCFrameTypes.UFrame || snrm.getCC() != HDLCFrameTypes.Commands.SNRM)
+            {
+                System.out.println("ERROR : Did not receive SNRM frame from " + server.getAddress());
+            }
+            
+            NetFrame ua = new NetFrame(server.getAddress(), HDLCFrameTypes.UFrame, HDLCFrameTypes.Commands.UA);
+            server.send(ua);
+            
+			// define new listeningThread
+			listeningThread = new Thread(this);
+			listeningThread.start();
+		}
+		catch (UnknownHostException e)
+		{
+			isConnected = false;
+			connectionStatus = "Bad Host!";
+			JOptionPane.showMessageDialog(null, "Don't know about host: " + serverAddress);
+		}
+		catch (IOException e)
+		{
+			isConnected = false;
+			connectionStatus = STATUS_KO;
+			JOptionPane.showMessageDialog(null, "Server is not running!");
+		}
+		catch (Exception e)
+		{
+			isConnected = false;
+			connectionStatus = "Error connecting to the chat server!";
+			JOptionPane.showMessageDialog(null, "Server is not running!");
+		}
+    }
 	
 	/**
 	 * Main method for the class.
@@ -273,20 +265,26 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	@Override
 	public void stop()
 	{
+		System.out.println("Stopping!");
 		try
 		{
-			thread.interrupt();
+			//server.send(new NetFrame(server.getAddress(), HDLCFrameTypes.UFrame, HDLCFrameTypes.Commands.DISC));
+			server.close();
+			listeningThread.interrupt();
 		}
 		catch(Exception e){}
 		
+		System.exit(0);
 	}
 	
 	/**
-	 * Run - thread method.
+	 * Run - listeningThread method.
+	 * Only executes once the connect button is pressed.
 	 */
 	@Override
 	public void run()
 	{
+		userData = "";
 		while (true)
 		{
 			checkServer();
@@ -318,16 +316,17 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	public void keyReleased(KeyEvent key){}
 	
 	/**
-	 * checkServer - this is a main client algorithm
+	 * checkServer - this is a main client algorithm.
+	 * Calls to the 
 	 */
 	public void checkServer()
 	{
 		try
 		{
-			if ((fromServer = serverConnection.read()) != null)
+			fromServer = server.read();
+			
+			if (!fromServer.isEmpty())
 			{
-				System.out.println("Received Frame!");
-				
 				NetFrame receivedFrame = new NetFrame(fromServer);
 				
 				// switch on type of frame
@@ -340,34 +339,39 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 						break;
 						
 					case SFrame: case UFrame:
-                        if (receivedFrame.getCC() == HDLCFrame.Commands.RR)
+                        if (receivedFrame.getCC() == HDLCFrameTypes.Commands.RR)
                         {
                             //Something to send
-                            if (fromUser != null)
+                            if (!userData.isEmpty())
                             {
-                                NetFrame toSend = new NetFrame(serverConnection.getAddress(), HDLCFrame.IFrame, HDLCFrame.Commands.RR, fromUser);
-                                serverConnection.send(toSend);
-                                fromUser = null;
+                                NetFrame toSend = new NetFrame(server.getAddress(), HDLCFrameTypes.IFrame, HDLCFrameTypes.Commands.RR, userData);                
+                                toSend.setPollFinal(false);
+                                server.send(toSend);
+                                userData = "";
                             }
                             //Nothing to send
                             else
                             {
-                               NetFrame toSend = new NetFrame(serverConnection.getAddress(), HDLCFrame.SFrame, HDLCFrame.Commands.RR); 
-                               serverConnection.send(toSend); 
+                               NetFrame toSend = new NetFrame(server.getAddress(), HDLCFrameTypes.SFrame, HDLCFrameTypes.Commands.RR); 
+                               toSend.setPollFinal(false);
+                               server.send(toSend); 
                             }
                         }
                         else
-                        {
-                            System.out.println("Error: did not receive RR control code");
-                        }
-
+                            System.err.println("Error: did not receive RR control code");
+                        
 						break;
 				}
 			}
 		}
+		catch (SocketException e)
+		{
+			System.err.println("Server dead! Going down now.");
+			stop();
+		}
 		catch (Exception e)
 		{
-			serverConnection.close();
+			e.printStackTrace();
 			stop();
 		}
 	}
