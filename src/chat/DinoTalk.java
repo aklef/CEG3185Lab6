@@ -26,7 +26,7 @@ import java.net.UnknownHostException;
 
 import com.google.common.net.InetAddresses;
 
-public class MyClientWin extends Applet implements ActionListener, KeyListener, Runnable
+public class DinoTalk extends Applet implements ActionListener, KeyListener, Runnable
 {
 	private static final long serialVersionUID = 1702635793607554428L;
 	
@@ -240,7 +240,7 @@ public class MyClientWin extends Applet implements ActionListener, KeyListener, 
 	public static void main(String args[])
 	{
 		// define window and call standard methods
-		MyClientWin client = new MyClientWin();
+		DinoTalk client = new DinoTalk();
 		frame = new Frame("Dinotalk - Chatting Program");
 		client.init();
 		client.start(); // client starts listening

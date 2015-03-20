@@ -22,7 +22,7 @@ class Connection
    /**
     * The virtual 'sliding window'
     */
-	private Window slidingWindow;
+	private SlidingWindow slidingWindow;
 	private LinkedList<String> messageQueue;
 	private Socket socket;
 	private BufferedReader socketReader;
@@ -36,7 +36,7 @@ class Connection
 	public Connection(Socket socket) throws IOException
 	{
 		this.socket = socket;
-		this.slidingWindow = new Window(this);
+		this.slidingWindow = new SlidingWindow(this);
 		this.socketWriter = new PrintWriter(socket.getOutputStream(), true);
 		this.socketReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 		this.messageQueue = new LinkedList<String>();

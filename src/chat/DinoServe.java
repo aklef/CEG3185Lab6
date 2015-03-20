@@ -9,7 +9,7 @@ import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.net.InetAddress;
 
-public class MyServer
+public class DinoServe
 {
 	/**
 	 * The TCP port this server will listen on for incoming connections.

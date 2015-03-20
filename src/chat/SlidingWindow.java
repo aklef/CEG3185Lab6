@@ -5,7 +5,7 @@ import chat.NetFrame.HDLCFrameTypes;
 
 import java.io.IOException;
 
-class Window
+class SlidingWindow
 {
 	private static final int MAX_WINDOW_LENGTH = 8;
 	private int NUMBER_SEND_SEQUENCE, NUMBER_RECEIVE_SEQUENCE;
@@ -20,9 +20,9 @@ class Window
 	private int L = 0, R = 8, M = 0;
 	
 	/**
-	 * Constructor for the sliding Window. Consists of an empty {@code LinkedList<Frame>} of HDLC frames of length {@code MAX_WINDOW_LENGTH}.
+	 * Constructor for the sliding SlidingWindow. Consists of an empty {@code LinkedList<Frame>} of HDLC frames of length {@code MAX_WINDOW_LENGTH}.
 	 */
-	public Window (Connection connect)
+	public SlidingWindow (Connection connect)
 	{
         this.connection = connect;
 		this.slidingWindow = new NetFrame[MAX_WINDOW_LENGTH];
