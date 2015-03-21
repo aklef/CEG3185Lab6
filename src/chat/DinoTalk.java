@@ -128,11 +128,12 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		
 		if (arg == "Close")
 		{
+			System.err.println("Client asked to terminate.");
+			
 			if(isConnected)
 			{
-				this.server.close();
+				this.stop();
 			}
-			System.exit(0);
 		}
 		// ******************************************
 		// Connect button pressed
