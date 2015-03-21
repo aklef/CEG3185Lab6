@@ -229,6 +229,9 @@ public class DinoServe
 			}
 			serverSocket.close();
 		}
-		catch (IOException e){}
+		catch (IOException e)
+		{
+			System.exit(-1);
+		}
 	}
 }

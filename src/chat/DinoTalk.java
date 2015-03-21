@@ -5,18 +5,17 @@ import chat.NetFrame.*;
 import java.applet.Applet;
 import java.awt.Color;
 import java.awt.Font;
-import java.awt.Frame;
 import java.awt.Graphics;
 import java.awt.TextArea;
-import java.awt.TextField;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+
 import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 import java.io.IOException;
@@ -38,14 +37,14 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 	/**
 	 * User input field
 	 */
-	private TextField textField;
+	private JTextField textField;
 	/**
 	 * Displays server messages.
 	 */
 	private TextArea textArea;
 	private JButton connectButton, msgButton;
 	private Font fontb;
-	private static Frame frame;
+	private static JFrame frame;
 	
 	private Thread listeningThread;
 	private InetAddress serverAddress;
@@ -58,25 +57,26 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 	@Override
 	public void init()
 	{
-		textField = new TextField("", 50);
-		textArea = new TextArea("No Messages", 15, 50);
+		textField = new JTextField("", 46);
+		textArea = new TextArea("No Messages", 15, 50, TextArea.SCROLLBARS_VERTICAL_ONLY);
 		textArea.setEditable(false);
 		textArea.setEnabled(false);
 		connectButton = new JButton("Connect");
+		connectButton.setFocusTraversalKeysEnabled(true);
 		connectionStatus = STATUS_KO;
 		msgButton = new JButton("Send Message");
 		msgButton.setEnabled(false);
 		JButton closeButton = new JButton("Close");
+		closeButton.setFocusTraversalKeysEnabled(true);
 		
 		fontb = new Font("Arial", Font.BOLD, 14);
 		
-		textField.addKeyListener(this);
+		textField.addActionListener(this);
+		msgButton.addKeyListener(this);
 		connectButton.addActionListener(this);
 		connectButton.addKeyListener(this);
 		closeButton.addActionListener(this);
 		closeButton.addKeyListener(this);
-		msgButton.addActionListener(this);
-		msgButton.addKeyListener(this);
 		
 		add(textField);
 		add(connectButton);
@@ -91,6 +91,18 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		}
 		catch (Exception e){}
 	}
+	
+	@Override
+	public void keyPressed(KeyEvent e)
+	{
+		if(e.getKeyCode() == KeyEvent.VK_ENTER){
+		      ((JButton) e.getSource()).doClick();
+		}  
+	}
+	@Override
+	public void keyTyped(KeyEvent e){}
+	@Override
+	public void keyReleased(KeyEvent e){}
 	
 	@Override
 	public void paint(Graphics g)
@@ -132,26 +144,39 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		// ******************************************
 		// Send Message button pressed
 		// ******************************************
-		else if (arg == "Send Message")
+		else if (arg == "Send Message" || evt.getSource() == textField)
 		{
-			if (!textField.getText().isEmpty())
-			{
-				//
-				// copy content of the message text into
-				// internal buffer for later processing
-				// only one message can be stored into the
-				// buffer
-				//
-				userData = clientId + ": " + textField.getText();
-				textField.setText("");
-			}
-			else
-			{
-				userData = "";
-			}
+			sendMsg();
 		}
+		else
+		{
+			System.out.print(arg);
+		}
+		
 		repaint();
 	}
+	
+	/**
+	 * Called when the connect button is pressed.
+	 */
+	private void sendMsg()
+    {
+		if (!textField.getText().isEmpty())
+		{
+			//
+			// copy content of the message text into
+			// internal buffer for later processing
+			// only one message can be stored into the
+			// buffer
+			//
+			userData = clientId + ": " + textField.getText();
+			textField.setText("");
+		}
+		else
+		{
+			userData = "";
+		}
+    }
 	
 	/**
 	 * Called when the connect button is pressed.
@@ -185,11 +210,12 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 			
 			server = new Connection(serverAddress, serverPort);
             isConnected = true;
-            msgButton.setEnabled(true);
-    		msgButton.requestFocusInWindow();
             connectButton.setEnabled(false);
-            textArea.setText("");
+            msgButton.setEnabled(true);
+            msgButton.setFocusTraversalKeysEnabled(true);
+            textField.requestFocusInWindow();
             textArea.setEnabled(true);
+            textArea.setText("");
             connectionStatus = STATUS_OK;
             
             repaint();
@@ -241,21 +267,18 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 	{
 		// define window and call standard methods
 		DinoTalk client = new DinoTalk();
-		frame = new Frame("Dinotalk - Chatting Program");
+		frame = new JFrame("Dinotalk - Chatting Program");
 		client.init();
 		client.start(); // client starts listening
 		
-		frame.addWindowListener(new WindowAdapter(){
-			public void windowClosing(WindowEvent we){
-				   System.exit(0);
-			}
-		});
-		
 		frame.add("Center", client);
 		frame.setSize(400, 400);
+		frame.getContentPane().setBackground(Color.WHITE);
 		frame.setResizable(false);
 		frame.setLocation(150, 170);
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setVisible(true);
+
 		client.connectButton.requestFocusInWindow();
 	}
 	
@@ -296,25 +319,6 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		}
 	}
 	
-	@Override
-	public void keyTyped(KeyEvent key){}
-	
-	@Override
-	public void keyPressed(KeyEvent key)
-	{
-		if (key.getKeyCode() == KeyEvent.VK_ENTER && key.getComponent().getClass() == JButton.class)
-		{
-			((JButton) key.getComponent()).doClick();
-		}
-		else if (key.getKeyCode() == KeyEvent.VK_ENTER && key.getComponent().getClass() == TextField.class)
-		{
-			msgButton.doClick();
-		}
-	}
-	
-	@Override
-	public void keyReleased(KeyEvent key){}
-	
 	/**
 	 * checkServer - this is a main client algorithm.
 	 * Calls to the 
@@ -335,7 +339,10 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 					case IFrame:
                         //Consume
                         fromServer = receivedFrame.getInfo();
-						textArea.setText(textArea.getText() + "\n" + fromServer); // put message on screen
+                        if (textArea.getText().isEmpty())
+                        	textArea.append(fromServer); // put message on screen
+                        else
+                        	textArea.append("\n"+fromServer);
 						break;
 						
 					case SFrame: case UFrame:
@@ -364,7 +371,7 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 				}
 			}
 		}
-		catch (SocketException e)
+		catch (SocketException | NullPointerException e)
 		{
 			System.err.println("Server dead! Going down now.");
 			stop();
