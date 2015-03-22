@@ -1,6 +1,9 @@
 package chat;
 
-import chat.NetFrame.*;
+import chat.NetFrame;
+import chat.NetFrame.HDLCFrame;
+import chat.NetFrame.HDLCFrame.*;
+
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.SocketException;
@@ -15,7 +18,7 @@ public class DinoServe
 	 * The TCP port this server will listen on for incoming connections.
 	 */
 	private static final int DEFAULT_PORT = 4444;
-	private static final int DEFAULT_SOCKET_TIMEOUT = 200;
+	private static final int DEFAULT_SOCKET_TIMEOUT = 250;
 	
 	/**
 	 * Server initializes an empty list of connections to clients.
@@ -56,8 +59,8 @@ public class DinoServe
     {
 		if (clients.contains(deadMan))
 			clients.remove(deadMan);
+		
 		deadMan.close();
-		deadMan = null;
     }
 	
 	/**
@@ -82,8 +85,8 @@ public class DinoServe
         String msg = "";
         for (Connection client : clients)
         {
-            NetFrame RR = new NetFrame(client.getAddress(), HDLCFrameTypes.SFrame, HDLCFrameTypes.Commands.RR), response = null;
-            RR.setPollFinal(true);
+            NetFrame RR = new NetFrame(client.getAddress(), Types.SFrame, Commands.RR), response = null;
+            RR.setPollFinal(HDLCFrame.Poll);
             
             try
 			{
@@ -96,32 +99,51 @@ public class DinoServe
 				e.printStackTrace();
 				return;
 			}
-
-            if (response.getFrameType() == HDLCFrameTypes.SFrame && response.getCC() == HDLCFrameTypes.Commands.RR)
+            
+            switch (response.getFrameType())
             {
-                //Received RR frame
-                //System.out.println(client.getAddress() + " is RR.");
-            }
-            else if (response.getFrameType() == HDLCFrameTypes.IFrame)
-            {                
-
-            	System.out.println(response.getInfo());
-                InetAddress destination = response.getDestinationAddress();
-                
-                //For each connection, check if the address matches
-                //If so, queue it to send it there
-                boolean found = false;
-                for (Connection destinationClient : clients)
-                {
-                    if (destination.equals(destinationClient.getAddress()))
+            	case IFrame:
+            		System.out.println(response.getInfo());
+                    InetAddress destination = response.getDestinationAddress();
+                    
+                    //For each connection, check if the address matches
+                    //If so, queue it to send it there
+                    boolean found = false;
+                    for (Connection destinationClient : clients)
                     {
-                        destinationClient.enqeue(msg);
-                        found = true;
+                        if (destination.equals(destinationClient.getAddress()))
+                        {
+                            destinationClient.enqeue(msg);
+                            found = true;
+                        }
                     }
-                }
-                
-                if (!found)
-                    consume(response);
+                    
+                    if (!found)
+                        consume(response);
+            		break;
+            		
+            	case SFrame:
+            		if (response.getCC() == Commands.RR && response.isFinal())
+                    {
+                        //System.out.println(client.getAddress() + " is RR.");
+                    }
+            		break;
+            		
+            	case UFrame:
+            		switch (response.getCC())
+                    {
+                    	case DISC:
+                    		//Client requesting clean disconnect
+                    		System.err.println(client.getAddress() + " requesting disconnect.");
+                    		NetFrame disc = new NetFrame(client.getAddress(), Types.UFrame, Commands.DISC);
+                			disc.setPollFinal(HDLCFrame.Final);
+                			client.send(disc);
+                			
+                			if (clients.contains(client))
+                				clients.remove(client);
+                            break;
+                    }
+            		break;
             }
         }
 	}
@@ -133,12 +155,12 @@ public class DinoServe
 	private static void handShake(Connection client) throws InterruptedException, Exception
     {
         // Set normal response mode
-    	NetFrame snrm = new NetFrame(client.getAddress(), HDLCFrameTypes.UFrame, HDLCFrameTypes.Commands.SNRM);
+    	NetFrame snrm = new NetFrame(client.getAddress(), Types.UFrame, Commands.SNRM);
         client.send(snrm);
 
         NetFrame ua = new NetFrame(client.read());
 
-        if (ua.getFrameType() != HDLCFrameTypes.UFrame || ua.getCC() != HDLCFrameTypes.Commands.UA)
+        if (!(ua.getFrameType() == Types.UFrame && ua.getCC() == Commands.UA))
         {
             System.err.println("ERROR : Did not receive UA frame from " + client.getAddress());
         }
@@ -194,6 +216,7 @@ public class DinoServe
             catch (SocketTimeoutException e) 
             {
             	// The listen socket timed out.
+            	//System.err.println("Timeout.");
             }
 			catch (Exception e)
 			{
@@ -211,7 +234,7 @@ public class DinoServe
 			{
 				// Cient disconnected
 				terminate(client);
-//                e.printStackTrace();
+                e.printStackTrace();
 			}
             
             if (clients.size() == 0 && clientsConnected)

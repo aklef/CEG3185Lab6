@@ -11,7 +11,7 @@ import com.google.common.collect.HashBiMap;
 
 /**
  * Represents a single link-layer HDLC frame.
- * Each {@code NetFrame} has a designated {@code HDLCFrameTypes} value.
+ * Each {@code NetFrame} has a designated {@code HDLCFrame} value.
  * 
  * @author Andréas K.LeF.
  * @author David Alleyn
@@ -26,40 +26,59 @@ public class NetFrame
 	/**
 	 * The HDLC frame types.
 	 */
-	public static enum HDLCFrameTypes {
-		/**
-		 * Information frame. Contains data that needs to be extracted.
-		 * Will contain {@code NetFrame} sequence numbers
-		 */
-		IFrame, 
-		/**
-		 * Control frame. Contains a {@code ControlCode}
-		 * for {@code NetFrame} management but to user info.
-		 */
-		SFrame, 
-		/**
-		 * Unnumbered frame for link management. 
-		 * Might be unused in this context.
-		 */
-		UFrame;
+	public static enum HDLCFrame
+	{
+		Poll, Final;
+		
+		enum Types
+		{
+			/**
+			 * Information frame. Contains data that needs to be extracted.
+			 * Will contain {@code NetFrame} sequence numbers
+			 */
+			IFrame, 
+			/**
+			 * Control frame. Contains a {@code ControlCode}
+			 * for {@code NetFrame} management but to user info.
+			 */
+			SFrame, 
+			/**
+			 * Unnumbered frame for link management. 
+			 * Might be unused in this context.
+			 */
+			UFrame;
+		}
 		
 		enum Commands
 		{
 			// (S)upervisory-frame commands
 			/**
 			 * Receive Ready
+			 * Used as positve acknowledgement (thru N(r)-1)
+			 * when no I-frame is available for piggy backing.
+			 * Primary can issue a POLL by setting P-bit.
+			 * Secondary response with F-bit set if it has no data to send.
 			 */
 			RR,
 			/**
 			 * Receive Not Ready
+			 * Used as positive acknowledgement (thru N(r)-1) and a request
+			 * that no more I-frames be sent until a subsequent RR is used.
+			 * 
+			 * Primary station can set P-bit to solicit the receive status
+			 * of a secondary/combined station.
+			 * 
+			 * Secondary station response to Poll with F-bit set if the station is busy.
 			 */
 			RNR,
 			/**
-			 * Reject 
+			 * Reject.
+			 * Go-Back-N technique (Retransmit from N(r))
 			 */
 			REJ,
 			/**
-			 * Selective Reject
+			 * Selective Reject.
+			 * Selective Repeat technique (Repeat  N(r))
 			 */
 			SREJ,
 			
@@ -78,38 +97,38 @@ public class NetFrame
 	}
 		
 	/**
-	 * Placeholder {@code String}s for each {@code NetFrame} {@code HDLCFrameTypes}'s {@code ControlCode}.
+	 * Placeholder {@code String}s for each {@code NetFrame} {@code HDLCFrame}'s {@code ControlCode}.
 	 */
-	private static BiMap<HDLCFrameTypes, String> FC;
+	private static BiMap<HDLCFrame.Types, String> FC;
 	static
     {
 		FC = HashBiMap.create();
-		FC.put(HDLCFrameTypes.IFrame, "0NSSPNRS");
-		FC.put(HDLCFrameTypes.SFrame, "10CCPNRS");
-		FC.put(HDLCFrameTypes.UFrame, "11CCPBBB");
+		FC.put(HDLCFrame.Types.IFrame, "0NSSPNRS");
+		FC.put(HDLCFrame.Types.SFrame, "10CCPNRS");
+		FC.put(HDLCFrame.Types.UFrame, "11CCPBBB");
     }
         
-	private static BiMap<HDLCFrameTypes.Commands, String> CC;
+	private static BiMap<HDLCFrame.Commands, String> CC;
     static
     {
 		CC = HashBiMap.create();
-		CC.put(HDLCFrameTypes.Commands.RR,   "00");
-		CC.put(HDLCFrameTypes.Commands.RNR,  "01");
-		CC.put(HDLCFrameTypes.Commands.REJ,  "10");
-		CC.put(HDLCFrameTypes.Commands.SREJ, "11");
+		CC.put(HDLCFrame.Commands.RR,   "00");
+		CC.put(HDLCFrame.Commands.RNR,  "01");
+		CC.put(HDLCFrame.Commands.REJ,  "10");
+		CC.put(HDLCFrame.Commands.SREJ, "11");
 		
-		CC.put(HDLCFrameTypes.Commands.SNRM,  "00001");
-		CC.put(HDLCFrameTypes.Commands.SNRME, "11011");
-		CC.put(HDLCFrameTypes.Commands.SIM,   "11000");
-		CC.put(HDLCFrameTypes.Commands.DISC,  "00010");
-//		CC.put(HDLCFrameTypes.Commands.RD,    "00010");
-		CC.put(HDLCFrameTypes.Commands.UA,    "00110");
-		CC.put(HDLCFrameTypes.Commands.RIM,   "10000");
-		CC.put(HDLCFrameTypes.Commands.UI,    "00000");
-		CC.put(HDLCFrameTypes.Commands.UP,    "00100");
-		CC.put(HDLCFrameTypes.Commands.RSET,  "11001");
-		CC.put(HDLCFrameTypes.Commands.XID,   "11101");
-		CC.put(HDLCFrameTypes.Commands.FRMR,  "10001");
+		CC.put(HDLCFrame.Commands.SNRM,  "00001");
+		CC.put(HDLCFrame.Commands.SNRME, "11011");
+		CC.put(HDLCFrame.Commands.SIM,   "11000");
+		CC.put(HDLCFrame.Commands.DISC,  "00010");
+//		CC.put(HDLCFrame.Commands.RD,    "00010");
+		CC.put(HDLCFrame.Commands.UA,    "00110");
+		CC.put(HDLCFrame.Commands.RIM,   "10000");
+		CC.put(HDLCFrame.Commands.UI,    "00000");
+		CC.put(HDLCFrame.Commands.UP,    "00100");
+		CC.put(HDLCFrame.Commands.RSET,  "11001");
+		CC.put(HDLCFrame.Commands.XID,   "11101");
+		CC.put(HDLCFrame.Commands.FRMR,  "10001");
     }
 	
 	private InetAddress addr;
@@ -130,49 +149,52 @@ public class NetFrame
 	 * values up to N(R)-1 (modulo 8) have been received and indicates the N(S) of the next frame it expects to receive.
 	 */
 	private String NRS;
-	
+	/**
+	 * Poll/Final value.
+	 */
+	private HDLCFrame pf;
 	/**
 	 * The {@code ControlCode} this frame is carrying.
 	 */
-	protected HDLCFrameTypes.Commands cc;
+	protected HDLCFrame.Commands cc;
 	/**
-	 * This {@code NetFrame}'s {@code HDLCFrameTypes}.
+	 * This {@code NetFrame}'s {@code HDLCFrame}.
 	 */
-	protected HDLCFrameTypes type;
+	protected HDLCFrame.Types type;
 	
 	/**
 	 * Parses a binary string to create a {@code NetFrame}
 	 * Its type and data are auto-detected.
 	 * 
-	 * @param frame encoded as binary {@code String}
+	 * @param fromString encoded as binary {@code String}
 	 */
-	public NetFrame (String frame) throws UnknownHostException
+	public NetFrame (String fromString) throws UnknownHostException, NullPointerException
 	{
 		//frame = frame.replaceAll(FLAG, "");
         
-		if (frame.isEmpty())
+		if (fromString.isEmpty())
 			throw new NullPointerException("Empty frame!");
 		
-		this.addr = getAddrFromBinary(frame.substring(0, 32));
-		this.fc = frame.substring(32, 40);
+		this.addr = getAddrFromBinary(fromString.substring(0, 32));
+		this.fc = fromString.substring(32, 40);
                    
 		if (fc.charAt(0) == '0')
 		{
-			this.type = NetFrame.HDLCFrameTypes.IFrame;
+			this.type = HDLCFrame.Types.IFrame;
 		}
 		else if (fc.charAt(1) == '0')
 		{
-			this.type = NetFrame.HDLCFrameTypes.SFrame;
+			this.type = HDLCFrame.Types.SFrame;
 		}
 		else if (fc.charAt(1) == '1')
 		{
-			this.type = NetFrame.HDLCFrameTypes.UFrame;
+			this.type = HDLCFrame.Types.UFrame;
 		}
 		
 		switch (this.type)
 		{
             case IFrame:
-            	this.info = frame.substring(40);
+            	this.info = fromString.substring(40);
             	this.NSS = fc.substring(1, 4);
             	this.NRS = fc.substring(5);
                 break;
@@ -186,14 +208,17 @@ public class NetFrame
             	this.cc = CC.inverse().get(fc.substring(2,4)+fc.substring(5));
                 break; 
 		}
+		
+		this.pf = (fc.charAt(4) == '1')? HDLCFrame.Poll : HDLCFrame.Final;
 	}
 	
 	/**
 	 * Used to create an {@code SFrame} from parameters.
 	 */
-	public NetFrame (InetAddress destAddr, HDLCFrameTypes type, HDLCFrameTypes.Commands code)
+	public NetFrame (InetAddress destAddr, HDLCFrame.Types type, HDLCFrame.Commands code)
 	{
-		this(destAddr, type, code, "");
+		this.addr = destAddr;
+		this.setType(type, code);
 	}
 	
 	/**
@@ -205,26 +230,26 @@ public class NetFrame
 	 * @param info client data.
 	 * @throws UnknownHostException 
 	 */
-	public NetFrame (InetAddress destAddr, HDLCFrameTypes type, HDLCFrameTypes.Commands code, String info)
+	public NetFrame (InetAddress destAddr, HDLCFrame.Types type, String info)
 	{
 		this.addr = destAddr;
         this.setInfo(info);
-		this.setType(type, code);
+		this.setType(type, null);
 	}
 
 	//*******************************SETTER METHODS************************************//
 	
 	/**
-	 * Sets this {@code NetFrame}'s {@code HDLCFrameTypes} and {@code ControlCode}
+	 * Sets this {@code NetFrame}'s {@code HDLCFrame} and {@code ControlCode}
 	 * by replacing placeholder values in {@code FC}.
 	 * 
-	 * @param type this {@code NetFrame}'s {@code HDLCFrameTypes} enum value
+	 * @param type this {@code NetFrame}'s {@code HDLCFrame} enum value
 	 * @param code the {@code ControlCode} of this {@code NetFrame}
 	 */
-	private void setType (HDLCFrameTypes type, HDLCFrameTypes.Commands code)
+	private void setType (HDLCFrame.Types type, HDLCFrame.Commands code)
 	{
-		this.type = type;
 		this.cc = code;
+		this.type = type;
 		String tempfc = FC.get(type);
 		
 		switch (type)
@@ -241,8 +266,8 @@ public class NetFrame
 				tempfc = tempfc.replace("BBB", CC.get(code).substring(2));
 				break;	
 		}
+		
 		this.fc = tempfc;
-		setPollFinal(false);
 	}
 	
 	void setInfo(String info)
@@ -255,17 +280,15 @@ public class NetFrame
 		else
 			this.info = info;
 	}
-
-	public void setPollFinal(Boolean set)
+	
+	/**
+	 * 
+	 * @param set Poll on {@code true} or Final on {@code false}
+	 */
+	public void setPollFinal(HDLCFrame pf)
 	{
-		if (set)
-		{
-			this.fc = fc.replace("P", "1");
-		}
-		else
-		{
-			this.fc = fc.replace("P", "0");
-		}
+		this.pf = pf;
+		this.fc = fc.replace("P", String.valueOf(pf == HDLCFrame.Poll? 1:0));
 	}
 
 	/**
@@ -305,7 +328,7 @@ public class NetFrame
 	 * 
 	 * @return
 	 */
-	public HDLCFrameTypes getFrameType()
+	public HDLCFrame.Types getFrameType()
 	{
 		return type;
 	}
@@ -315,9 +338,24 @@ public class NetFrame
 	 * 
 	 * @return
 	 */
-	public HDLCFrameTypes.Commands getCC()
+	public HDLCFrame.Commands getCC()
 	{
 		return this.cc;
+	}
+	
+	public HDLCFrame getPollFinal()
+	{
+		return this.pf;
+	}
+	
+	public boolean isPoll()
+	{
+		return getPollFinal() == HDLCFrame.Poll;
+	}
+	
+	public boolean isFinal()
+	{
+		return getPollFinal() == HDLCFrame.Final;
 	}
 	
 	String getRemaining ()
@@ -336,7 +374,7 @@ public class NetFrame
 		//String frame = FLAG + getAddrInBinary(addr);
         String frame = getAddrInBinary(addr) + this.fc;
 		
-		if (!info.equals(""))
+		if (info != null)
 			frame += info;
 		
 		//return (frame + FLAG);

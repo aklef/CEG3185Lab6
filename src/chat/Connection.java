@@ -9,6 +9,8 @@ import java.net.Socket;
 import java.net.SocketException;
 import java.util.LinkedList;
 
+import chat.NetFrame;
+
 /**
  * Represents
  * 
@@ -57,7 +59,7 @@ class Connection
 	 * 
 	 * @param frame to be sent throught this connection.
 	 */
-	void send(NetFrame frame)
+	void send(NetFrame frame) throws IOException
 	{
 		slidingWindow.add(frame);
 		slidingWindow.run();
@@ -69,7 +71,7 @@ class Connection
 	 * @param frames to be sent through this connection.
 	 * @throws InterruptedException In case of network write failure. Network probably down.
 	 */
-	void send(NetFrame[] frames) throws InterruptedException
+	void send(NetFrame[] frames) throws InterruptedException, IOException
 	{
         for (NetFrame frame : frames)
 		{
@@ -83,13 +85,6 @@ class Connection
     {
         socketWriter.println(message);
     }
-    
-    protected void waitForAck() throws IOException
-    {
-        // something should arrive unblocking this, signlaing an ACK.
-    	// i.e wait for that YOLOACK
-    	socketReader.readLine();
-    }
         
     public InetAddress getAddress()
     {
@@ -97,14 +92,17 @@ class Connection
     }
 	
     /**
-     * Check this connection for incoming messages
+     * Check this connection for incoming messages. Blocks until something is received.
      * @return incoming message.
      */
 	protected String read() throws IOException, SocketException
 	{
 		String result = socketReader.readLine();
 //		System.out.println(socket + " says:\n"+ result);
-        socketWriter.println("YOLOACK"); // Write anything to acknowledge mesage receipt..
+
+//		NetFrame ack = new NetFrame(socket.getInetAddress(), Types.SFrame, Commands.RR);
+//		ack.setPollFinal(true);
+//      socketWriter.println(ack); // acknowledge mesage receipt..
 		
 		return result;
 	}
@@ -113,7 +111,6 @@ class Connection
 	{
 		try
 		{
-			
 			this.socket.close();
 		}
 		catch (IOException e){}

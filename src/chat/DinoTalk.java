@@ -1,6 +1,8 @@
 package chat;
 
-import chat.NetFrame.*;
+import chat.NetFrame;
+import chat.NetFrame.HDLCFrame;
+import chat.NetFrame.HDLCFrame.*;
 
 import java.applet.Applet;
 import java.awt.Color;
@@ -128,11 +130,11 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		
 		if (arg == "Close")
 		{
-			System.err.println("Client asked to terminate.");
+			System.out.println("Attempting disconnect..");
 			
 			if(isConnected)
 			{
-				this.stop();
+				this.disconnect();
 			}
 		}
 		// ******************************************
@@ -209,8 +211,6 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 				serverPort = DEFAULT_SERVER_PORT;
 			}
 			
-			server = new Connection(serverAddress, serverPort);
-            isConnected = true;
             connectButton.setEnabled(false);
             msgButton.setEnabled(true);
             msgButton.setFocusTraversalKeysEnabled(true);
@@ -224,41 +224,50 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 			// optional - setting socket timeout to 5 secs
 			// this is not necessary because application
 			// runs with multiple threads
-			// mySocket.setSoTimeout(5000);
+			// mySocket.setSoTimeout(500);
 			
-			String received = server.read();
-            NetFrame snrm = new NetFrame(received);
-            if (snrm.getFrameType() != HDLCFrameTypes.UFrame || snrm.getCC() != HDLCFrameTypes.Commands.SNRM)
-            {
-                System.out.println("ERROR : Did not receive SNRM frame from " + server.getAddress());
-            }
-            
-            NetFrame ua = new NetFrame(server.getAddress(), HDLCFrameTypes.UFrame, HDLCFrameTypes.Commands.UA);
-            server.send(ua);
+            server = new Connection(serverAddress, serverPort);
+            handShake();
             
 			// define new listeningThread
 			listeningThread = new Thread(this);
 			listeningThread.start();
+			
+            isConnected = true;
 		}
 		catch (UnknownHostException e)
 		{
-			isConnected = false;
 			connectionStatus = "Bad Host!";
 			JOptionPane.showMessageDialog(null, "Don't know about host: " + serverAddress);
 		}
 		catch (IOException e)
 		{
-			isConnected = false;
 			connectionStatus = STATUS_KO;
 			JOptionPane.showMessageDialog(null, "Server is not running!");
 		}
 		catch (Exception e)
 		{
-			isConnected = false;
 			connectionStatus = "Error connecting to the chat server!";
 			JOptionPane.showMessageDialog(null, "Server is not running!");
 		}
     }
+	
+	private void disconnect()
+	{
+			NetFrame disc = new NetFrame(server.getAddress(), Types.UFrame, Commands.DISC);
+			disc.setPollFinal(HDLCFrame.Poll);
+			try
+			{
+				server.send(disc);
+			}
+			catch (IOException e)
+			{
+				e.printStackTrace();
+			}
+			
+			//Wait for clean disconnect
+			checkServer();
+	}
 	
 	/**
 	 * Main method for the class.
@@ -292,11 +301,13 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		System.out.println("Stopping!");
 		try
 		{
-			//server.send(new NetFrame(server.getAddress(), HDLCFrameTypes.UFrame, HDLCFrameTypes.Commands.DISC));
-			server.close();
 			listeningThread.interrupt();
+			server.close();
 		}
-		catch(Exception e){}
+		catch(Exception e)
+		{
+			e.printStackTrace();
+		}
 		
 		System.exit(0);
 	}
@@ -321,10 +332,28 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 	}
 	
 	/**
-	 * checkServer - this is a main client algorithm.
-	 * Calls to the 
+	 * To complete an HDLC handshake.
 	 */
-	public void checkServer()
+	private void handShake() throws SocketException, IOException
+    {
+		String received = server.read();
+        NetFrame snrm = new NetFrame(received);
+        
+        if (snrm.getFrameType() == Types.UFrame && snrm.getCC() == Commands.SNRM)
+        {
+            NetFrame ua = new NetFrame(server.getAddress(), Types.UFrame, Commands.UA);
+            server.send(ua);
+        }
+        else
+        {
+            System.err.println("ERROR : Did not receive SNRM frame from " + server.getAddress());
+        }
+    }
+	
+	/**
+	 * checkServer - this is a main client algorithm.
+	 */
+	private void checkServer()
 	{
 		try
 		{
@@ -332,42 +361,45 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 			
 			if (!fromServer.isEmpty())
 			{
-				NetFrame receivedFrame = new NetFrame(fromServer);
-				
-				// switch on type of frame
-				switch(receivedFrame.getFrameType())
+				NetFrame recv = new NetFrame(fromServer);
+				switch(recv.getFrameType())
 				{
 					case IFrame:
-                        //Consume
-                        fromServer = receivedFrame.getInfo();
+                        fromServer = recv.getInfo();
                         if (textArea.getText().isEmpty())
-                        	textArea.append(fromServer); // put message on screen
+                        	textArea.append(fromServer);
                         else
                         	textArea.append("\n"+fromServer);
 						break;
 						
-					case SFrame: case UFrame:
-                        if (receivedFrame.getCC() == HDLCFrameTypes.Commands.RR)
+					case SFrame:
+                        switch (recv.getCC())
                         {
-                            //Something to send
-                            if (!userData.isEmpty())
-                            {
-                                NetFrame toSend = new NetFrame(server.getAddress(), HDLCFrameTypes.IFrame, HDLCFrameTypes.Commands.RR, userData);                
-                                toSend.setPollFinal(false);
-                                server.send(toSend);
-                                userData = "";
-                            }
-                            //Nothing to send
-                            else
-                            {
-                               NetFrame toSend = new NetFrame(server.getAddress(), HDLCFrameTypes.SFrame, HDLCFrameTypes.Commands.RR); 
-                               toSend.setPollFinal(false);
-                               server.send(toSend); 
-                            }
+                        	case RR:
+                        		NetFrame toSend = null;
+                                if (!userData.isEmpty()) //Something to send
+                                {
+                                	toSend = new NetFrame(server.getAddress(), Types.IFrame, userData);
+                                    userData = "";
+                                }
+                                else if (recv.isPoll()) // Request for ack
+                                {
+                                	toSend = new NetFrame(server.getAddress(), Types.SFrame, Commands.RR);
+                                }
+                                toSend.setPollFinal(HDLCFrame.Final); //Send ack
+                                server.send(toSend); 
+                                break;
                         }
-                        else
-                            System.err.println("Error: did not receive RR control code");
-                        
+						break;
+						
+					case UFrame:
+						switch (recv.getCC())
+                        {
+                        	case DISC:
+                        		System.out.println("Server allowed clean disconnect.");
+                        		stop();
+                                break;
+                        }
 						break;
 				}
 			}

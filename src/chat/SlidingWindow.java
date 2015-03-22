@@ -1,15 +1,13 @@
 package chat;
 
-import chat.NetFrame;
-import chat.NetFrame.HDLCFrameTypes;
-
-import java.io.IOException;
+import chat.NetFrame.*;
+import chat.NetFrame.HDLCFrame.*;
 
 class SlidingWindow
 {
 	private static final int MAX_WINDOW_LENGTH = 8;
 	private int NUMBER_SEND_SEQUENCE, NUMBER_RECEIVE_SEQUENCE;
-	private HDLCFrameTypes previousFrameType;
+	private HDLCFrame.Types previousFrameType;
 	
     private NetFrame[] slidingWindow;
     private Connection connection;
@@ -33,20 +31,20 @@ class SlidingWindow
 	public boolean add(NetFrame frame)
 			//throws InterruptedException
 	{
-		if (previousFrameType == HDLCFrameTypes.IFrame && frame.getFrameType() != HDLCFrameTypes.IFrame)
+		if (previousFrameType == Types.IFrame && frame.getFrameType() != Types.IFrame)
         {
 			// No longer sending I-Frames. Reset.
 			NUMBER_SEND_SEQUENCE = 0;
         }
-		else if (previousFrameType == HDLCFrameTypes.IFrame && frame.getFrameType() == HDLCFrameTypes.IFrame)
+		else if (previousFrameType == Types.IFrame && frame.getFrameType() == Types.IFrame)
         {
 			NUMBER_SEND_SEQUENCE = (NUMBER_SEND_SEQUENCE + 1) % 8;
         	frame.setNSS(NUMBER_SEND_SEQUENCE);
         }
 		
-		if (frame.getFrameType() == HDLCFrameTypes.IFrame || frame.getFrameType() == HDLCFrameTypes.SFrame)
+		if (frame.getFrameType() == Types.IFrame || frame.getFrameType() == Types.SFrame)
         {
-			if (frame.getFrameType() == HDLCFrameTypes.IFrame)
+			if (frame.getFrameType() == Types.IFrame)
 	        	frame.setNSS(NUMBER_SEND_SEQUENCE);
 	        	
 			frame.setNRS(NUMBER_RECEIVE_SEQUENCE);
@@ -73,21 +71,10 @@ class SlidingWindow
     {
         if (M != L)
         {
-            try
-            {
-//                System.out.println("Sending");
-                connection.sendSRS(slidingWindow[L]);
-//                System.out.println("Acking");
-                connection.waitForAck();
-//                System.out.println("Acked");
-                
-                this.L = (++L) % MAX_WINDOW_LENGTH;
-                this.R = (++R) % MAX_WINDOW_LENGTH;
-            }
-            catch (IOException ex)
-            {
-            	//ex.printStackTrace();
-            } 
+            connection.sendSRS(slidingWindow[L]);
+            
+            this.L = (++L) % MAX_WINDOW_LENGTH;
+            this.R = (++R) % MAX_WINDOW_LENGTH;
         }
     }
 }
