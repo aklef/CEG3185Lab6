@@ -282,9 +282,9 @@ public class DinoTalk extends Applet implements ActionListener, KeyListener, Run
 		client.start(); // client starts listening
 		
 		frame.add("Center", client);
-		frame.setSize(400, 400);
+		frame.setSize(550, 400);
 		frame.getContentPane().setBackground(Color.WHITE);
-		frame.setResizable(false);
+		frame.setResizable(true);
 		frame.setLocation(150, 170);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.setVisible(true);

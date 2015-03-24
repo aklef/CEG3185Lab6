@@ -104,22 +104,14 @@ public class DinoServe
             {
             	case IFrame:
             		System.out.println(response.getInfo());
-                    InetAddress destination = response.getDestinationAddress();
                     
                     //For each connection, check if the address matches
                     //If so, queue it to send it there
-                    boolean found = false;
                     for (Connection destinationClient : clients)
                     {
-                        if (destination.equals(destinationClient.getAddress()))
-                        {
                             destinationClient.enqeue(msg);
-                            found = true;
-                        }
                     }
                     
-                    if (!found)
-                        consume(response);
             		break;
             		
             	case SFrame:
@@ -162,7 +154,7 @@ public class DinoServe
 
         if (!(ua.getFrameType() == Types.UFrame && ua.getCC() == Commands.UA))
         {
-            System.err.println("ERROR : Did not receive UA frame from " + client.getAddress());
+            System.err.println("ERROR : Did not  UA frame from " + client.getAddress());
         }
     }
 	/**
